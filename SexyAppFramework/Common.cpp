@@ -209,12 +209,75 @@ std::wstring Sexy::StringToLower(const std::wstring& theString)
 	return aString;
 }
 
+// NOTE ON UNICODE / SexyString:
+// SexyString is a narrow std::string (see Common.h) and is expected to hold
+// UTF-8 encoded text everywhere in the engine. StringToWString/WStringToString
+// are the bridge used all over (XMLParser, resource loading, etc) to move
+// text between that UTF-8 std::string and std::wstring. These used to either
+// widen raw bytes 1:1 (StringToWString, which is only correct for Latin-1,
+// not UTF-8) or go through wcstombs()/the active C locale (WStringToString,
+// which on a default "C" locale mangles/drops anything outside ASCII). Both
+// are now explicit, locale-independent UTF-8 <-> UTF-16 codeunit converters
+// so multi-language text survives the round trip. wchar_t is treated as a
+// UTF-16 code unit (matches its size on the MSVC target this project builds
+// for); codepoints above the BMP are encoded/decoded as surrogate pairs.
 std::wstring Sexy::StringToWString(const std::string& theString)
 {
 	std::wstring aString;
 	aString.reserve(theString.length());
-	for (size_t i = 0; i < theString.length(); ++i)
-		aString += (unsigned char)theString[i];
+
+	size_t i = 0;
+	size_t aLen = theString.length();
+	while (i < aLen)
+	{
+		unsigned char c0 = (unsigned char)theString[i];
+		int aExtraBytes;
+		unsigned int aCodepoint;
+
+		if (c0 < 0x80)					{ aCodepoint = c0;			aExtraBytes = 0; }
+		else if ((c0 & 0xE0) == 0xC0)	{ aCodepoint = c0 & 0x1F;	aExtraBytes = 1; }
+		else if ((c0 & 0xF0) == 0xE0)	{ aCodepoint = c0 & 0x0F;	aExtraBytes = 2; }
+		else if ((c0 & 0xF8) == 0xF0)	{ aCodepoint = c0 & 0x07;	aExtraBytes = 3; }
+		else							{ aString += (wchar_t)c0; ++i; continue; } // not a valid UTF-8 lead byte; fall back to Latin-1 for that byte
+
+		if (i + aExtraBytes >= aLen)
+		{
+			aString += (wchar_t)c0; // truncated sequence
+			++i;
+			continue;
+		}
+
+		bool valid = true;
+		unsigned int aValue = aCodepoint;
+		for (int b = 1; b <= aExtraBytes; ++b)
+		{
+			unsigned char cc = (unsigned char)theString[i + b];
+			if ((cc & 0xC0) != 0x80) { valid = false; break; }
+			aValue = (aValue << 6) | (cc & 0x3F);
+		}
+
+		if (!valid)
+		{
+			aString += (wchar_t)c0;
+			++i;
+			continue;
+		}
+
+		i += aExtraBytes + 1;
+
+		if (aValue > 0xFFFF)
+		{
+			// wchar_t is a UTF-16 code unit here, so encode as a surrogate pair
+			aValue -= 0x10000;
+			aString += (wchar_t)(0xD800 + (aValue >> 10));
+			aString += (wchar_t)(0xDC00 + (aValue & 0x3FF));
+		}
+		else
+		{
+			aString += (wchar_t)aValue;
+		}
+	}
+
 	return aString;
 }
 #include <string>
@@ -226,24 +289,50 @@ std::string Sexy::WStringToString(const std::wstring& theString)
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	return converter.to_bytes(theString);
 #else
-	size_t aRequiredLength = wcstombs(NULL, theString.c_str(), 0);
-	if (aRequiredLength < 16384)
-	{
-		char aBuffer[16384];
-		wcstombs(aBuffer, theString.c_str(), 16384);
-		return std::string(aBuffer);
-	}
-	else
-	{
-		DBG_ASSERTE(aRequiredLength != (size_t)-1);
-		if (aRequiredLength == (size_t)-1) return "";
+	std::string aString;
+	aString.reserve(theString.length());
 
-		char* aBuffer = new char[aRequiredLength + 1];
-		wcstombs(aBuffer, theString.c_str(), aRequiredLength + 1);
-		std::string aStr = aBuffer;
-		delete[] aBuffer;
-		return aStr;
-}
+	size_t aLen = theString.length();
+	for (size_t i = 0; i < aLen; ++i)
+	{
+		unsigned int aValue = (unsigned int)(unsigned short)theString[i];
+
+		// Combine a UTF-16 surrogate pair into a single codepoint
+		if (aValue >= 0xD800 && aValue <= 0xDBFF && i + 1 < aLen)
+		{
+			unsigned int aLow = (unsigned int)(unsigned short)theString[i + 1];
+			if (aLow >= 0xDC00 && aLow <= 0xDFFF)
+			{
+				aValue = 0x10000 + ((aValue - 0xD800) << 10) + (aLow - 0xDC00);
+				++i;
+			}
+		}
+
+		if (aValue < 0x80)
+		{
+			aString += (char)aValue;
+		}
+		else if (aValue < 0x800)
+		{
+			aString += (char)(0xC0 | (aValue >> 6));
+			aString += (char)(0x80 | (aValue & 0x3F));
+		}
+		else if (aValue < 0x10000)
+		{
+			aString += (char)(0xE0 | (aValue >> 12));
+			aString += (char)(0x80 | ((aValue >> 6) & 0x3F));
+			aString += (char)(0x80 | (aValue & 0x3F));
+		}
+		else
+		{
+			aString += (char)(0xF0 | (aValue >> 18));
+			aString += (char)(0x80 | ((aValue >> 12) & 0x3F));
+			aString += (char)(0x80 | ((aValue >> 6) & 0x3F));
+			aString += (char)(0x80 | (aValue & 0x3F));
+		}
+	}
+
+	return aString;
 #endif
 }
 
