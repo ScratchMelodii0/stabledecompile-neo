@@ -365,19 +365,27 @@ void LawnApp::MakeWindow()
 		mFullScreenWindow = false;
 	}
 
-#define _WIDE_SCREEN
-#ifdef _ULTRA_WIDESCREEN
-	mWidth = 1280;
-	mHeight = 720;
+	// Aspect Ratio / Widescreen support. mResolutionMode is a persisted user setting
+	// (see MoreSettingsDialog) picked from the {800,1066,1280}x{600,720,800} table below;
+	// the offsets it produces are used throughout Lawn/ to anchor HUD elements to the
+	// real screen edges instead of the native 800x600 canvas.
+	static const int aResolutionWidths[] = { 800, 1066, 1280 };
+	static const int aResolutionHeights[] = { 600, 720, 800 };
+	static const int aNumResolutionWidths = sizeof(aResolutionWidths) / sizeof(int);
 
-	mDDInterface->mWideScreenOffsetX = 240;
-	mDDInterface->mWideScreenOffsetY = 60;
-#elif defined(_WIDE_SCREEN)
-	mWidth = 1066;
-	mHeight = 600;
+	if (mWidescreenAware)
+	{
+		const int aWidthIndex = mResolutionMode % aNumResolutionWidths;
+		const int aHeightIndex = mResolutionMode / aNumResolutionWidths;
 
-	mDDInterface->mWideScreenOffsetX = 133;
-#endif
+		mWidth = aResolutionWidths[aWidthIndex];
+		mHeight = aResolutionHeights[aHeightIndex];
+
+		mDDInterface->mWideScreenExtraWidth = mWidth - BOARD_WIDTH;
+		mDDInterface->mWideScreenOffsetX = mDDInterface->mWideScreenExtraWidth / 2;
+		mDDInterface->mWideScreenExtraHeight = mHeight - BOARD_HEIGHT;
+		mDDInterface->mWideScreenOffsetY = mDDInterface->mWideScreenExtraHeight / 2;
+	}
 
 	gBoardBounds = Rect{ 0, 0, mWidth, mHeight };
 
@@ -4888,4 +4896,9 @@ void LawnApp::DoMoreSettingsDialog()
 {
 	MoreSettingsDialog* aDialog = new MoreSettingsDialog(this);
 	AddDialog(Dialogs::DIALOG_MORESETTINGS, aDialog);
+}
+
+void LawnApp::KillMoreSettingsDialog()
+{
+	KillDialog(Dialogs::DIALOG_MORESETTINGS);
 }

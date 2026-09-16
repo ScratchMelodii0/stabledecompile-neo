@@ -29,6 +29,12 @@ const int           IMITATER_DIALOG_HEIGHT = 600;
 const int			WIDESCREEN_OFFSETX = -240;
 const int			WIDESCREEN_OFFSETY = -60;
 
+// Aspect Ratio / Resolution modes, indexed into SexyAppBase::mResolutionMode
+// (widthIndex + heightIndex * numWidths against the {800,1066,1280}/{600,720,800} tables).
+const int			ASPECT_RATIO_STANDARD = 0;		// 800x600  (4:3, original)
+const int			ASPECT_RATIO_WIDESCREEN = 1;		// 1066x600 (16:9)
+const int			ASPECT_RATIO_WIDESCREEN_HD = 5;	// 1280x720 (16:9, taller board)
+
 const int			STREET_ZOMBIE_START_X = 1030; // PC: 830 - Console : 1000
 const int			STREET_ZOMBIE_ROOF_START_X = 900;
 const int			STREET_ZOMBIE_START_Y = 70;

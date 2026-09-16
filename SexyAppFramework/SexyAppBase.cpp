@@ -1618,7 +1618,8 @@ void SexyAppBase::WriteToRegistry()
 	RegistryWriteInteger(_S("PreferredWIDTH"), mPreferredWIDTH);
 	RegistryWriteInteger(_S("PreferredHEIGHT"), mPreferredHEIGHT);
 	RegistryWriteInteger(_S("PreferredMAXIMIZED"), mPreferredMAXIMIZED);
-	RegistryWriteInteger(_S("CustomCursors"), mCustomCursorsEnabled ? 1 : 0);		
+	RegistryWriteInteger(_S("CustomCursors"), mCustomCursorsEnabled ? 1 : 0);
+	RegistryWriteInteger(_S("ResolutionMode"), mResolutionMode);
 	RegistryWriteInteger(_S("InProgress"), 0);
 	RegistryWriteBoolean(_S("WaitForVSync"), mWaitForVSync);
 	RegistryWriteBoolean(_S("EnableVsync"), mEnableVsync);
@@ -1983,6 +1984,12 @@ void SexyAppBase::ReadFromRegistry()
 	RegistryReadInteger(_S("PreferredWIDTH"), &mPreferredWIDTH);
 	RegistryReadInteger(_S("PreferredHEIGHT"), &mPreferredHEIGHT);
 	RegistryReadBoolean(_S("PreferredMAXIMIZED"), &mPreferredMAXIMIZED);
+
+	if (RegistryReadInteger(_S("ResolutionMode"), &anInt))
+	{
+		const int aMaxMode = mNumWidths * mNumHeights - 1;
+		mResolutionMode = max(0, min(anInt, aMaxMode));
+	}
 
 	const int widthIndex = mResolutionMode % mNumWidths;
 	const int heightIndex = mResolutionMode / mNumWidths;

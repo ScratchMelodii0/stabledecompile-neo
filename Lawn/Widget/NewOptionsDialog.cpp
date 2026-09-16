@@ -26,8 +26,9 @@ NewOptionsDialog::NewOptionsDialog(LawnApp* theApp, bool theFromGameSelector) :
     mRestartButton = MakeButton(NewOptionsDialog::NewOptionsDialog_Restart, this, _S("[RESTART_LEVEL]"));
     mBackToMainButton = MakeButton(NewOptionsDialog::NewOptionsDialog_MainMenu, this, _S("[MAIN_MENU_BUTTON]"));
 
-   /* mGameplayButton = MakeButton(NewOptionsDialog::NewOptionsDialog_VideoGraphics, this, _S("[GAMEPLAY_SETTINGS_BUTTON]"));
-    mControllerButton = MakeButton(NewOptionsDialog::NewOptionsDialog_SoundSystem, this, _S("[CONTROLLER_BUTTON]"));
+    mGameplayButton = MakeButton(NewOptionsDialog::NewOptionsDialog_VideoGraphics, this, _S("MORE SETTINGS"));
+
+    /*mControllerButton = MakeButton(NewOptionsDialog::NewOptionsDialog_SoundSystem, this, _S("[CONTROLLER_BUTTON]"));
     mLanguageButton = MakeButton(NewOptionsDialog::NewOptionsDialog_Language, this, _S("[LANGUAGE_BUTTON]"));*/
 
     mBackToGameButton = MakeNewButton(
@@ -109,7 +110,7 @@ NewOptionsDialog::NewOptionsDialog(LawnApp* theApp, bool theFromGameSelector) :
     //}
 }
 
-//0x45C760¡¢0x45C780
+//0x45C760ï¿½ï¿½0x45C780
 NewOptionsDialog::~NewOptionsDialog()
 {
     delete mMusicVolumeSlider;
@@ -120,8 +121,8 @@ NewOptionsDialog::~NewOptionsDialog()
     delete mRestartButton;
     delete mBackToMainButton;
     delete mBackToGameButton;
-    /*delete mGameplayButton;
-    delete mControllerButton;
+    delete mGameplayButton;
+    /*delete mControllerButton;
     delete mLanguageButton;*/
 }
 
@@ -135,8 +136,8 @@ int NewOptionsDialog::GetPreferredHeight(int theWidth)
 void NewOptionsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager)
 {
     Dialog::AddedToManager(theWidgetManager);
-    /*AddWidget(mGameplayButton);
-    AddWidget(mControllerButton);
+    AddWidget(mGameplayButton);
+    /*AddWidget(mControllerButton);
     AddWidget(mLanguageButton);*/
     AddWidget(mAlmanacButton);
     AddWidget(mRestartButton);
@@ -152,8 +153,8 @@ void NewOptionsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager)
 void NewOptionsDialog::RemovedFromManager(Sexy::WidgetManager* theWidgetManager)
 {
     Dialog::RemovedFromManager(theWidgetManager);
-    /*RemoveWidget(mGameplayButton);
-    RemoveWidget(mControllerButton);
+    RemoveWidget(mGameplayButton);
+    /*RemoveWidget(mControllerButton);
     RemoveWidget(mLanguageButton);*/
     RemoveWidget(mAlmanacButton);
     RemoveWidget(mRestartButton);
@@ -178,8 +179,8 @@ void NewOptionsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
     mBackToMainButton->Resize(mRestartButton->mX, mRestartButton->mY + 43, 209, 46);
     mBackToGameButton->Resize(30, 381, mBackToGameButton->mWidth, mBackToGameButton->mHeight);
 
-    /*mGameplayButton->Resize(mAlmanacButton->mX, 116, 209, 46);
-    mControllerButton->Resize(mAlmanacButton->mX, mGameplayButton->mY + 43, 209, 46);
+    mGameplayButton->Resize(mBackToMainButton->mX, mBackToMainButton->mY + 43, 209, 46);
+    /*mControllerButton->Resize(mAlmanacButton->mX, mGameplayButton->mY + 43, 209, 46);
     mLanguageButton->Resize(mAlmanacButton->mX, mControllerButton->mY + 43, 209, 46);*/
 
     if (mFromGameSelector)
@@ -188,9 +189,9 @@ void NewOptionsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
         mSfxVolumeSlider->mY += 10;
         mHardwareAccelerationCheckbox->mY += 15;
         mFullscreenCheckbox->mY += 20;
+        mGameplayButton->mY += 20;
 
-        /*mGameplayButton->mY += 69;
-        mControllerButton->mY += 69;
+        /*mControllerButton->mY += 69;
         mLanguageButton->mY += 69;
         mBackToMainButton->Resize(mAlmanacButton->mX, mLanguageButton->mY + 43, 209, 46);*/
     }
@@ -430,6 +431,10 @@ void NewOptionsDialog::ButtonDepress(int theId)
 
     case NewOptionsDialog::NewOptionsDialog_Update:
         mApp->CheckForUpdates();
+        break;
+
+    case NewOptionsDialog::NewOptionsDialog_VideoGraphics:
+        mApp->DoMoreSettingsDialog();
         break;
 
     case NewOptionsDialog::NewOptionsDialog_Language:
