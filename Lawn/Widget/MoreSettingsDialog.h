@@ -26,7 +26,10 @@ private:
 		MoreSettingsDialog_AutoPause,
 		MoreSettingsDialog_OptimizedGameplay,
 		MoreSettingsDialog_NoToolTip,
-	}; 
+		MoreSettingsDialog_AspectStandard,
+		MoreSettingsDialog_AspectWidescreen,
+		MoreSettingsDialog_AspectWidescreenHD,
+	};
 
 	enum MoreSettingsPages {
 		MoreSettingsPage_1,
@@ -45,6 +48,11 @@ public:
 	Checkbox*			mAutoPause;
 	Checkbox*			mShowToolTip;
 
+	// PP2 - Aspect Ratio / Widescreen (radio-style selection)
+	Checkbox*			mAspectStandard;
+	Checkbox*			mAspectWidescreen;
+	Checkbox*			mAspectWidescreenHD;
+
 public:
 	MoreSettingsDialog(LawnApp* theApp);
 	~MoreSettingsDialog();
@@ -55,6 +63,7 @@ public:
 	void				CheckboxChecked(int theId, bool checked);
 	void				ButtonDepress(int theId);
 	void				ChangePage(MoreSettingsPages thePage);
+	void				SelectAspectRatio(int theResolutionMode);
 	void				Update();
 };
 #endif

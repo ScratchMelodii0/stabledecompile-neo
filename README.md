@@ -23,8 +23,8 @@ A Project focused in making modding both GOTY and OG possible, adding features a
 - [x]  Particle Editor *`In progress`*
 - [ ]  Add Console Minigames and PvP Content
 - [x]  Font Builder *`tools/FontBuilder`, standalone CLI, see its README`*
-- [ ]  Aspect Ratio Changer / Widescreen
-- [ ]  Implement More-Settings Screen
+- [x]  Aspect Ratio Changer / Widescreen *`persisted mResolutionMode (More Settings), letterbox+HUD-offset via existing mWideScreenOffsetX/Y; applies on next launch, background art stays 4:3 (known limitation)`*
+- [x]  Implement More-Settings Screen *`MoreSettingsDialog wired up from Options ("MORE SETTINGS" button); other page-1 checkboxes (cursor/FPS/auto-pause/tooltip) were already scaffolded but still don't bind to real app state - best-effort`*
 - [x]  Unicode Support for Multi Lang. *`UTF-8 aware SDL3Font rendering + string conversion`*
 
 # DISCLAIMER

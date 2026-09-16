@@ -7,6 +7,7 @@
 #include "GameButton.h"
 #include "../../SexyAppFramework/DDInterface.h"
 #include "../System/Music.h"
+#include "../../GameConstants.h"
 
 MoreSettingsDialog::MoreSettingsDialog(LawnApp* theApp) :
 	LawnDialog(theApp, Dialogs::DIALOG_MORESETTINGS, true, _S("MORE SETTINGS"), "", _S("CLOSE"), Dialog::BUTTONS_FOOTER)
@@ -22,6 +23,11 @@ MoreSettingsDialog::MoreSettingsDialog(LawnApp* theApp) :
 	mAutoPause = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AutoPause, this, false); //  !mApp->mNoAutoPause
 	mShowToolTip = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_NoToolTip, this, false); //!mApp->mNoTooltip
 
+	// PP2
+	mAspectStandard = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AspectStandard, this, false);
+	mAspectWidescreen = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AspectWidescreen, this, false);
+	mAspectWidescreenHD = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AspectWidescreenHD, this, false);
+	SelectAspectRatio(mApp->mResolutionMode);
 
 	ChangePage(MoreSettingsDialog::MoreSettingsPage_1);
 
@@ -39,6 +45,10 @@ MoreSettingsDialog::~MoreSettingsDialog()
 	delete mFPSToggle;
 	delete mAutoPause;
 	delete mShowToolTip;
+
+	delete mAspectStandard;
+	delete mAspectWidescreen;
+	delete mAspectWidescreenHD;
 }
 
 void MoreSettingsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager) 
@@ -52,6 +62,10 @@ void MoreSettingsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager)
 	AddWidget(mFPSToggle);
 	AddWidget(mAutoPause);
 	AddWidget(mShowToolTip);
+
+	AddWidget(mAspectStandard);
+	AddWidget(mAspectWidescreen);
+	AddWidget(mAspectWidescreenHD);
 }
 
 void MoreSettingsDialog::RemovedFromManager(Sexy::WidgetManager* theWidgetManager)
@@ -65,6 +79,10 @@ void MoreSettingsDialog::RemovedFromManager(Sexy::WidgetManager* theWidgetManage
 	RemoveWidget(mFPSToggle);
 	RemoveWidget(mAutoPause);
 	RemoveWidget(mShowToolTip);
+
+	RemoveWidget(mAspectStandard);
+	RemoveWidget(mAspectWidescreen);
+	RemoveWidget(mAspectWidescreenHD);
 }
 
 void MoreSettingsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
@@ -95,9 +113,9 @@ void MoreSettingsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
 	}
 	else if (mCurPage == MoreSettingsPage_2)
 	{
-		//
-		startX += aWidth / 2;
-		//
+		mAspectStandard->Resize(startX, aStartY + offsetY - 12, 46, 45);
+		mAspectWidescreen->Resize(startX, mAspectStandard->mY + mAspectStandard->mHeight / 1.75f + 10, 46, 45);
+		mAspectWidescreenHD->Resize(startX, mAspectWidescreen->mY + mAspectWidescreen->mHeight / 1.75f + 10, 46, 45);
 	}
 
 	mPage1->Resize(40, aStartY + 110 + 18, mPage1->mWidth, 46);
@@ -141,7 +159,11 @@ void MoreSettingsDialog::Draw(Graphics* g)
 	}
 	else if (mCurPage == MoreSettingsPage_2)
 	{
-		
+		TodDrawString(g, "Aspect Ratio", mAspectStandard->mX, mAspectStandard->mY - 4, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+		TodDrawString(g, "Standard (4:3)", mAspectStandard->mX + aTextOffsetX, mAspectStandard->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+		TodDrawString(g, "Widescreen (16:9)", mAspectWidescreen->mX + aTextOffsetX, mAspectWidescreen->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+		TodDrawString(g, "Widescreen HD (16:9)", mAspectWidescreenHD->mX + aTextOffsetX, mAspectWidescreenHD->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+		TodDrawString(g, "Restart the game to apply a new aspect ratio.", mAspectWidescreenHD->mX + aTextOffsetX, mAspectWidescreenHD->mY + aTextOffsetY + 40, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
 	}
 }
 
@@ -183,9 +205,40 @@ void MoreSettingsDialog::CheckboxChecked(int theId, bool checked)
 
 			break;
 		}
+		case MoreSettingsDialog::MoreSettingsDialog_AspectStandard:
+		{
+			if (checked) SelectAspectRatio(ASPECT_RATIO_STANDARD);
+			else mAspectStandard->SetChecked(true, false); // radio group: at least one must stay checked
+			break;
+		}
+		case MoreSettingsDialog::MoreSettingsDialog_AspectWidescreen:
+		{
+			if (checked) SelectAspectRatio(ASPECT_RATIO_WIDESCREEN);
+			else mAspectWidescreen->SetChecked(true, false);
+			break;
+		}
+		case MoreSettingsDialog::MoreSettingsDialog_AspectWidescreenHD:
+		{
+			if (checked) SelectAspectRatio(ASPECT_RATIO_WIDESCREEN_HD);
+			else mAspectWidescreenHD->SetChecked(true, false);
+			break;
+		}
 	}
 
 	mApp->PlaySample(SOUND_BUTTONCLICK);
+}
+
+void MoreSettingsDialog::SelectAspectRatio(int theResolutionMode)
+{
+	mAspectStandard->SetChecked(theResolutionMode == ASPECT_RATIO_STANDARD, false);
+	mAspectWidescreen->SetChecked(theResolutionMode == ASPECT_RATIO_WIDESCREEN, false);
+	mAspectWidescreenHD->SetChecked(theResolutionMode == ASPECT_RATIO_WIDESCREEN_HD, false);
+
+	if (mApp->mResolutionMode != theResolutionMode)
+	{
+		mApp->mResolutionMode = theResolutionMode;
+		mApp->RegistryWriteInteger("ResolutionMode", theResolutionMode);
+	}
 }
 
 void MoreSettingsDialog::ChangePage(MoreSettingsPages thePage)
@@ -199,6 +252,9 @@ void MoreSettingsDialog::ChangePage(MoreSettingsPages thePage)
 
 	mHardwareAcceleration->mVisible = mCustomCursor->mVisible = mFPSToggle->mVisible =
 	mAutoPause->mVisible  = mShowToolTip->mVisible = mCurPage == MoreSettingsPage_1;
+
+	mAspectStandard->mVisible = mAspectWidescreen->mVisible = mAspectWidescreenHD->mVisible =
+		mCurPage == MoreSettingsPage_2;
 
 	Resize(mX, mY, mWidth, mHeight);
 }
