@@ -3500,7 +3500,11 @@ bool LawnApp::IsChallengeWithoutSeedBank()
 #endif
 #ifdef _DS_MINIGAMES
 		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE
-		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP 
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS
+#endif
+#ifdef _CONSOLE_MINIGAMES
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON
 #endif
 		;
 }

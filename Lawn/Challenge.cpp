@@ -332,6 +332,7 @@ Challenge::Challenge()
 	mBrainHealth = 0;
 	mBrainX = 0;
 	mBrainY = 0;
+	mMobileGunFireCounter = 0;
 	for (int i = 0; i < 6; i++)
 		mReanimClouds[i] = REANIMATIONID_NULL;
 	memset(mBeghouledEated, 0, sizeof(mBeghouledEated));
@@ -593,6 +594,20 @@ void Challenge::StartLevel()
 		mBrainRow = 2;
 		mBrainAltitude = 50 - WIDESCREEN_OFFSETY;
 		mBrainRenderOrder = Board::MakeRenderOrder(RENDER_LAYER_TOP, mBrainRow, 0);
+	}
+	if (aGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS)
+	{
+		mBoard->DisplayAdvice(_S("[ADVICE_AIR_RAID_DS]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+		mBoard->mZombieCountDown = 600;
+		mBoard->mZombieCountDownStart = mBoard->mZombieCountDown;
+	}
+#endif
+#ifdef _CONSOLE_MINIGAMES
+	if (aGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON)
+	{
+		mBoard->DisplayAdvice(_S("[ADVICE_HEAVY_WEAPON]"), MESSAGE_STYLE_HINT_FAST, ADVICE_NONE);
+		mBoard->mZombieCountDown = 600;
+		mBoard->mZombieCountDownStart = mBoard->mZombieCountDown;
 	}
 #endif
 }
@@ -2388,6 +2403,16 @@ void Challenge::Update()
 	{
 		HeatWaveUpdate();
 	}
+	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS)
+	{
+		AirRaidUpdate();
+	}
+#endif
+#ifdef _CONSOLE_MINIGAMES
+	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON)
+	{
+		HeavyWeaponUpdate();
+	}
 #endif
 
 	/*if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN)
@@ -2978,6 +3003,30 @@ void Challenge::InitZombieWaves()
 		aList[ZOMBIE_FOOTBALL] = true;
 		aList[ZOMBIE_GARGANTUAR] = true;
 
+	}
+	else if (aGameMode == GAMEMODE_CHALLENGE_AIR_RAID_DS)
+	{
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_NEWSPAPER] = true;
+		aList[ZOMBIE_SNORKEL] = true;
+		aList[ZOMBIE_DOLPHIN_RIDER] = true;
+		aList[ZOMBIE_FOOTBALL] = true;
+		aList[ZOMBIE_BALLOON] = true;
+	}
+#endif
+#ifdef _CONSOLE_MINIGAMES
+	else if (aGameMode == GAMEMODE_CHALLENGE_HEAVY_WEAPON)
+	{
+		aList[ZOMBIE_NORMAL] = true;
+		aList[ZOMBIE_TRAFFIC_CONE] = true;
+		aList[ZOMBIE_PAIL] = true;
+		aList[ZOMBIE_POLEVAULTER] = true;
+		aList[ZOMBIE_NEWSPAPER] = true;
+		aList[ZOMBIE_DOOR] = true;
+		aList[ZOMBIE_FOOTBALL] = true;
+		aList[ZOMBIE_GARGANTUAR] = true;
 	}
 #endif
 	else if (mApp->mGameMode == GameMode::GAMEMODE_LAST_STAND_STAGE_1)
@@ -6440,3 +6489,130 @@ void Challenge::MouseDownButterAZombie(int theX, int theY)
 		aTopZombie->ApplyButter();
 	}
 }
+#if defined(_DS_MINIGAMES) || defined(_CONSOLE_MINIGAMES)
+// ====================================================================================================
+// ▲ “重装武器”/DS 版“空袭”所共用的可移动炮台
+// ----------------------------------------------------------------------------------------------------
+// 这两个关卡中场上有且仅有一株机枪豌豆，它不种在格子里，而是跟随鼠标移动。
+// ====================================================================================================
+Plant* Challenge::GetMobileGun()
+{
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
+	{
+		if (aPlant->mSeedType == SeedType::SEED_GATLINGPEA && !aPlant->mDead)
+			return aPlant;
+	}
+	return nullptr;
+}
+
+//	将炮台平滑地移动至目标像素坐标处，并同步其所在的行列与绘制顺序
+void Challenge::MoveMobileGun(Plant* theGun, int thePosX, int thePosY)
+{
+	int aDiffX = thePosX - theGun->mX;
+	if (aDiffX > 0)
+		theGun->mX += min(MOBILE_GUN_SLIDE_SPEED, aDiffX);
+	else if (aDiffX < 0)
+		theGun->mX -= min(MOBILE_GUN_SLIDE_SPEED, -aDiffX);
+
+	int aDiffY = thePosY - theGun->mY;
+	if (aDiffY > 0)
+		theGun->mY += min(MOBILE_GUN_SLIDE_SPEED, aDiffY);
+	else if (aDiffY < 0)
+		theGun->mY -= min(MOBILE_GUN_SLIDE_SPEED, -aDiffY);
+
+	theGun->mPlantCol = ClampInt((theGun->mX + 40 - LAWN_XMIN) / 80, 0, MAX_GRID_SIZE_X - 1);
+	theGun->mRow = mBoard->PixelToGridYKeepOnBoard(theGun->mX + 40, theGun->mY + 40);
+	theGun->mRenderOrder = theGun->CalcRenderOrder();
+
+	// 炮台是玩家唯一的武器，不允许僵尸把它啃掉
+	theGun->mPlantHealth = theGun->mPlantMaxHealth;
+	theGun->mIsAsleep = false;
+}
+#endif
+
+#ifdef _CONSOLE_MINIGAMES
+// ====================================================================================================
+// ▲ 主机版专属小游戏“重装武器”
+// ----------------------------------------------------------------------------------------------------
+// 炮台沿草坪底部左右滑动，持续向上方倾泻豌豆；僵尸仍从右侧推进，被弹幕拦下。
+// ====================================================================================================
+void Challenge::HeavyWeaponFire(Plant* theGun)
+{
+	// 炮口的位置，与豌豆射手一族平时的取法一致
+	int aOffsetX = 0, aOffsetY = 0;
+	if (mApp->ReanimationTryToGet(theGun->mBodyReanimID))
+	{
+		theGun->GetPeaHeadOffset(aOffsetX, aOffsetY);
+	}
+
+	Projectile* aProjectile = mBoard->AddProjectile(
+		theGun->mX + aOffsetX + 24, theGun->mY + aOffsetY - 33, theGun->mRenderOrder - 1, theGun->mRow, ProjectileType::PROJECTILE_PEA);
+	if (aProjectile == nullptr)
+		return;
+
+	aProjectile->mDamageRangeFlags = theGun->GetDamageRangeFlags(PlantWeapon::WEAPON_PRIMARY);
+	aProjectile->mMotionType = ProjectileMotion::MOTION_STAR;
+	aProjectile->mVelX = 0.0f;
+	aProjectile->mVelY = -(float)HEAVY_WEAPON_PEA_SPEED;
+
+	mApp->PlayFoley(FoleyType::FOLEY_THROW);
+}
+
+void Challenge::HeavyWeaponUpdate()
+{
+	Plant* aGun = GetMobileGun();
+	if (aGun == nullptr)
+		return;
+
+	int aMouseX = mApp->mWidgetManager->mLastMouseX - mBoard->mX - mApp->mDDInterface->mWideScreenOffsetX;
+	int aTargetX = ClampInt(aMouseX - 40, mBoard->GridToPixelX(0, HEAVY_WEAPON_GUN_ROW), mBoard->GridToPixelX(MAX_GRID_SIZE_X - 1, HEAVY_WEAPON_GUN_ROW));
+	MoveMobileGun(aGun, aTargetX, mBoard->GridToPixelY(aGun->mPlantCol, HEAVY_WEAPON_GUN_ROW));
+
+	if (mBoard->mPaused || mApp->mGameScene != GameScenes::SCENE_PLAYING)
+		return;
+
+	mMobileGunFireCounter--;
+	if (mMobileGunFireCounter <= 0)
+	{
+		mMobileGunFireCounter = HEAVY_WEAPON_FIRE_RATE;
+		HeavyWeaponFire(aGun);
+	}
+}
+#endif
+
+#ifdef _DS_MINIGAMES
+// ====================================================================================================
+// ▲ NDS 版专属小游戏“空袭”
+// ----------------------------------------------------------------------------------------------------
+// 一株坐在花盆上的机枪豌豆随鼠标在整个草坪上飞行，并照常向所在行的僵尸射击。
+// ====================================================================================================
+void Challenge::AirRaidUpdate()
+{
+	Plant* aGun = GetMobileGun();
+	if (aGun == nullptr)
+		return;
+
+	int aMouseX = mApp->mWidgetManager->mLastMouseX - mBoard->mX - mApp->mDDInterface->mWideScreenOffsetX;
+	int aMouseY = mApp->mWidgetManager->mLastMouseY - mBoard->mY - mApp->mDDInterface->mWideScreenOffsetY;
+	int aTargetX = ClampInt(aMouseX - 40, mBoard->GridToPixelX(0, 0), mBoard->GridToPixelX(MAX_GRID_SIZE_X - 1, 0));
+	int aTargetY = ClampInt(aMouseY - 40, mBoard->GridToPixelY(0, 0), mBoard->GridToPixelY(0, MAX_GRID_SIZE_Y - 1));
+	MoveMobileGun(aGun, aTargetX, aTargetY);
+
+	// 花盆始终跟在机枪豌豆的脚下
+	Plant* aPlant = nullptr;
+	while (mBoard->IteratePlants(aPlant))
+	{
+		if (aPlant->mSeedType == SeedType::SEED_FLOWERPOT && !aPlant->mDead)
+		{
+			aPlant->mX = aGun->mX;
+			aPlant->mY = aGun->mY;
+			aPlant->mPlantCol = aGun->mPlantCol;
+			aPlant->mRow = aGun->mRow;
+			aPlant->mRenderOrder = aPlant->CalcRenderOrder();
+			aPlant->mPlantHealth = aPlant->mPlantMaxHealth;
+			break;
+		}
+	}
+}
+#endif

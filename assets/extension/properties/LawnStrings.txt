@@ -1,0 +1,8 @@
+[AIR_RAID_DS]
+Air Raid
+
+[ADVICE_HEAVY_WEAPON]
+Slide your cannon along the lawn and rain peas on the zombies!
+
+[ADVICE_AIR_RAID_DS]
+Fly your Gatling Pea around the lawn and mow the zombies down!

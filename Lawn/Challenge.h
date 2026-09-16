@@ -19,6 +19,11 @@ constexpr const int MAX_PORTALS = 4;
 constexpr const int MAX_SQUIRRELS = 7;
 constexpr const int MAX_SCARY_POTS = 54;
 constexpr const int STORM_FLASH_TIME = 150;
+// “重装武器”与 DS 版“空袭”所用的可移动机枪豌豆的参数
+constexpr const int HEAVY_WEAPON_GUN_ROW = 4;
+constexpr const int HEAVY_WEAPON_FIRE_RATE = 12;
+constexpr const int HEAVY_WEAPON_PEA_SPEED = 6;
+constexpr const int MOBILE_GUN_SLIDE_SPEED = 12;
 
 using namespace Sexy;
 
@@ -84,6 +89,7 @@ public:
     float                   mBrainAltitude;
     int                     mBrainRow;
     int                     mBrainRenderOrder;
+    int                     mMobileGunFireCounter;
 
 public:
     Challenge();
@@ -246,6 +252,15 @@ public:
     bool                    TreeOfWisdomCanFeed();
 #ifdef _DS_MINIGAMES
     void                    HeatWaveUpdate();
+    void                    AirRaidUpdate();
+#endif
+#ifdef _CONSOLE_MINIGAMES
+    void                    HeavyWeaponUpdate();
+    void                    HeavyWeaponFire(Plant* theGun);
+#endif
+#if defined(_DS_MINIGAMES) || defined(_CONSOLE_MINIGAMES)
+    Plant*                  GetMobileGun();
+    void                    MoveMobileGun(Plant* theGun, int thePosX, int thePosY);
 #endif
 
     GridItem*               GetPortalLeftRight(int theGridX, int theGridY, bool theToLeft = true);

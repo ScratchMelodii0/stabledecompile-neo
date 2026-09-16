@@ -732,6 +732,10 @@ void Board::PickZombieWaves()
 #ifdef _DS_MINIGAMES
 
 				|| aGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE
+				|| aGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS
+#endif
+#ifdef _CONSOLE_MINIGAMES
+				|| aGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON
 #endif
 			)
 			mNumWaves = 20;
@@ -1108,6 +1112,9 @@ void Board::PickBackground()
 #ifdef _DS_MINIGAMES
 	case GameMode::GAMEMODE_CHALLENGE_BOMB_ALL_TOGETHER:
 #endif
+#ifdef _CONSOLE_MINIGAMES
+	case GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON:
+#endif
 		mBackground = BackgroundType::BACKGROUND_1_DAY;
 		break;
 
@@ -1165,6 +1172,7 @@ void Board::PickBackground()
 #endif
 #ifdef _DS_MINIGAMES
 	case GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE:
+	case GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS:
 #endif
 	case GameMode::GAMEMODE_LAST_STAND_STAGE_3:
 	case GameMode::GAMEMODE_LAST_STAND_ENDLESS_STAGE_3:
