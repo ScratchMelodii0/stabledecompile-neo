@@ -704,6 +704,21 @@ void CutScene::PlaceLawnItems()
 		mBoard->NewPlant(0, 5, SeedType::SEED_COBCANNON, SeedType::SEED_NONE);
 	}
 #endif
+#ifdef _DS_MINIGAMES
+	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS)
+	{
+		// 空袭：一个放在花盆上的机枪豌豆，随鼠标在草坪上自由飞行
+		mBoard->NewPlant(4, 2, SeedType::SEED_FLOWERPOT, SeedType::SEED_NONE);
+		mBoard->NewPlant(4, 2, SeedType::SEED_GATLINGPEA, SeedType::SEED_NONE);
+	}
+#endif
+#ifdef _CONSOLE_MINIGAMES
+	if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON)
+	{
+		// 重装武器：一门沿着草坪底部左右滑动、向上开火的机枪豌豆
+		mBoard->NewPlant(4, HEAVY_WEAPON_GUN_ROW, SeedType::SEED_GATLINGPEA, SeedType::SEED_NONE);
+	}
+#endif
 }
 
 //0x43A710
@@ -993,7 +1008,7 @@ void CutScene::StartLevelIntro()
 	}
 
 	if (mApp->IsFinalBossLevel() || mApp->IsScaryPotterLevel() || mApp->IsWallnutBowlingLevel() 
-#ifdef _CONSOLE_MINIGAMES
+#ifdef _MOBILE_MINIGAMES
 		|| mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_BUTTERED_POPCORN
 #endif
 		)

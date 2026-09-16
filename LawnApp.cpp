@@ -3500,7 +3500,11 @@ bool LawnApp::IsChallengeWithoutSeedBank()
 #endif
 #ifdef _DS_MINIGAMES
 		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE
-		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP 
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID_DS
+#endif
+#ifdef _CONSOLE_MINIGAMES
+		|| mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON
 #endif
 		;
 }
@@ -4819,11 +4823,13 @@ void LawnApp::KillLanguageScreen()
 
 bool LawnApp::ChallengeUsesMicrophone(GameMode theGameMode)
 {
-	return
 #ifdef _DS_MINIGAMES
-		theGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE; // ||
+	if (theGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE)
+		return true;
 #endif
-		//theGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN && gLawnApp->IsScreenSaver();
+	//if (theGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN && gLawnApp->IsScreenSaver())
+	//	return true;
+	return false;
 }
 
 bool LawnApp::ChallengeHasScores(GameMode theGameMode)

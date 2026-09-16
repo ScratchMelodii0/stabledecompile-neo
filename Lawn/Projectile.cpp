@@ -441,7 +441,8 @@ void Projectile::CheckForCollision()
 		return;
 	}
 
-	if (mProjectileType == ProjectileType::PROJECTILE_STAR && (mPosY > 600.0f || mPosY < 0.0f))
+	// 星星式弹道的子弹一旦飞出屏幕上下边界即销毁（不限于杨桃的星星，机枪炮台向上打出的豌豆同理）
+	if ((mProjectileType == ProjectileType::PROJECTILE_STAR || mMotionType == ProjectileMotion::MOTION_STAR) && (mPosY > 600.0f || mPosY < 0.0f))
 	{
 		Die();
 		return;

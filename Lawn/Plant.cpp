@@ -1297,7 +1297,7 @@ void Plant::UpdateShooter()
     if (mLaunchCounter <= 0)
     {
         mLaunchCounter = mLaunchRate - Sexy::Rand(15);
-#ifdef _MOBILE_MINIGAMES
+#ifdef _DS_MINIGAMES
         if (mState == PlantState::STATE_HEAT_WAVE_POWERED)
             mLaunchCounter = 26;
 #endif
