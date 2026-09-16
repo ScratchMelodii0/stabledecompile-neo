@@ -244,7 +244,7 @@ public:
     void                    TreeOfWisdomGiveWisdom();
     void                    TreeOfWisdomSayRepeat();
     bool                    TreeOfWisdomCanFeed();
-#ifdef _MOBILE_MINIGAMES
+#ifdef _DS_MINIGAMES
     void                    HeatWaveUpdate();
 #endif
 

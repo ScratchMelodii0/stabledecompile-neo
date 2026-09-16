@@ -7709,9 +7709,9 @@ bool Board::HasProgressMeter()
 		mApp->IsIZombieLevel())
 		return true;
 
-	if (mProgressMeterWidth == 0 && mApp->mGameMode != GameMode::GAMEMODE_CHALLENGE_ZOMBIQUARIUM 
+	if (mProgressMeterWidth == 0 && mApp->mGameMode != GameMode::GAMEMODE_CHALLENGE_ZOMBIQUARIUM
 #ifdef _DS_MINIGAMES
-		&& mApp->mGameMode != GameMode::GAMEMODE_CHALLENGE_ZOMBIQUARIUM
+		&& mApp->mGameMode != GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP
 #endif
 		)
 		return false;

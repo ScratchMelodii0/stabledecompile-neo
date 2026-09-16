@@ -993,7 +993,7 @@ void CutScene::StartLevelIntro()
 	}
 
 	if (mApp->IsFinalBossLevel() || mApp->IsScaryPotterLevel() || mApp->IsWallnutBowlingLevel() 
-#ifdef _CONSOLE_MINIGAMES
+#ifdef _MOBILE_MINIGAMES
 		|| mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_BUTTERED_POPCORN
 #endif
 		)

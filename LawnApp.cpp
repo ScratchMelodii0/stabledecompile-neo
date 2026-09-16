@@ -4819,11 +4819,13 @@ void LawnApp::KillLanguageScreen()
 
 bool LawnApp::ChallengeUsesMicrophone(GameMode theGameMode)
 {
-	return
 #ifdef _DS_MINIGAMES
-		theGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE; // ||
+	if (theGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE)
+		return true;
 #endif
-		//theGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN && gLawnApp->IsScreenSaver();
+	//if (theGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN && gLawnApp->IsScreenSaver())
+	//	return true;
+	return false;
 }
 
 bool LawnApp::ChallengeHasScores(GameMode theGameMode)

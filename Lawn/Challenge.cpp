@@ -6195,7 +6195,7 @@ bool Challenge::TreeOfWisdomCanFeed()
 
 	return true;
 }
-#ifdef _MOBILE_MINIGAMES
+#ifdef _DS_MINIGAMES
 void Challenge::HeatWaveUpdate()
 {
 	if (mBoard->mMainCounter % 750 == 0 && mBoard->mMainCounter > 1500)
