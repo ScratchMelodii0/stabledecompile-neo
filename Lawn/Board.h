@@ -12,6 +12,7 @@
 #include "Coin.h"
 #include "LawnMower.h"
 #include "GridItem.h"
+#include "LawnPlayer.h"
 
 #include "../SexyAppFramework/DDInterface.h"
 #include "../SexyAppFramework/SexyMatrix.h"
@@ -133,6 +134,13 @@ public:
 	CursorPreview*					mCursorPreview;											//+0x13C
 	MessageWidget*					mAdvice;												//+0x140
 	SeedBank*						mSeedBank;												//+0x144
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 本地双人：玩家一始终使用上面那一套 mCursorObject / mSeedBank / mSunMoney，
+	// 玩家二的同名状态存在 mPlayer2 里，处理其输入或绘制时临时与 Board 的成员互换，
+	// 这样 Board 里上万行只认识“当前玩家”的旧代码都无须改写。
+	LawnPlayer						mPlayer2;
+	int								mActivePlayerIndex;
+#endif
 	GameButton*						mMenuButton;											//+0x148
 #ifdef _REPLANTED_SPEED_CONTROL
 	NewLawnButton*					mSlowdownButton;
@@ -357,6 +365,16 @@ public:
 	void							GetPlantsOnLawn(int theGridX, int theGridY, PlantsOnLawn* thePlantOnLawn);
 	/*inline*/ int					CountSunFlowers();
 	int								GetSeedPacketPositionX(int theIndex);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	bool							IsLocalMultiplayer();
+	void							InitLocalMultiplayer();
+	void							SwapPlayerContext();
+	void							UpdateLocalPlayers();
+	void							DrawPlayer2SeedBank(Graphics* g);
+	void							DrawPlayer2Cursor(Graphics* g);
+#endif
+	int								GetPlayerPointerX(int thePlayerIndex);
+	int								GetPlayerPointerY(int thePlayerIndex);
 	void							AddGraveStones(int theGridX, int theCount, MTRand& theLevelRNG);
 	int								GetGraveStoneCount();
 	void							ZombiesWon(Zombie* theZombie = nullptr);

@@ -28,6 +28,9 @@ MoreSettingsDialog::MoreSettingsDialog(LawnApp* theApp) :
 	mAspectWidescreen = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AspectWidescreen, this, false);
 	mAspectWidescreenHD = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_AspectWidescreenHD, this, false);
 	SelectAspectRatio(mApp->mResolutionMode);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	mLocalCoop = MakeNewCheckbox(MoreSettingsDialog::MoreSettingsDialog_LocalCoop, this, mApp->mLocalCoopEnabled);
+#endif
 
 	ChangePage(MoreSettingsDialog::MoreSettingsPage_1);
 
@@ -49,6 +52,9 @@ MoreSettingsDialog::~MoreSettingsDialog()
 	delete mAspectStandard;
 	delete mAspectWidescreen;
 	delete mAspectWidescreenHD;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	delete mLocalCoop;
+#endif
 }
 
 void MoreSettingsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager) 
@@ -66,6 +72,9 @@ void MoreSettingsDialog::AddedToManager(Sexy::WidgetManager* theWidgetManager)
 	AddWidget(mAspectStandard);
 	AddWidget(mAspectWidescreen);
 	AddWidget(mAspectWidescreenHD);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	AddWidget(mLocalCoop);
+#endif
 }
 
 void MoreSettingsDialog::RemovedFromManager(Sexy::WidgetManager* theWidgetManager)
@@ -83,6 +92,9 @@ void MoreSettingsDialog::RemovedFromManager(Sexy::WidgetManager* theWidgetManage
 	RemoveWidget(mAspectStandard);
 	RemoveWidget(mAspectWidescreen);
 	RemoveWidget(mAspectWidescreenHD);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	RemoveWidget(mLocalCoop);
+#endif
 }
 
 void MoreSettingsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
@@ -116,6 +128,9 @@ void MoreSettingsDialog::Resize(int theX, int theY, int theWidth, int theHeight)
 		mAspectStandard->Resize(startX, aStartY + offsetY - 12, 46, 45);
 		mAspectWidescreen->Resize(startX, mAspectStandard->mY + mAspectStandard->mHeight / 1.75f + 10, 46, 45);
 		mAspectWidescreenHD->Resize(startX, mAspectWidescreen->mY + mAspectWidescreen->mHeight / 1.75f + 10, 46, 45);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		mLocalCoop->Resize(startX, mAspectWidescreenHD->mY + mAspectWidescreenHD->mHeight / 1.75f + 70, 46, 45);
+#endif
 	}
 
 	mPage1->Resize(40, aStartY + 110 + 18, mPage1->mWidth, 46);
@@ -164,6 +179,10 @@ void MoreSettingsDialog::Draw(Graphics* g)
 		TodDrawString(g, "Widescreen (16:9)", mAspectWidescreen->mX + aTextOffsetX, mAspectWidescreen->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
 		TodDrawString(g, "Widescreen HD (16:9)", mAspectWidescreenHD->mX + aTextOffsetX, mAspectWidescreenHD->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
 		TodDrawString(g, "Restart the game to apply a new aspect ratio.", mAspectWidescreenHD->mX + aTextOffsetX, mAspectWidescreenHD->mY + aTextOffsetY + 40, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		TodDrawString(g, "Local Co-op (2 Players)", mLocalCoop->mX + aTextOffsetX, mLocalCoop->mY + aTextOffsetY, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+		TodDrawString(g, "Player 2: gamepad, or arrow keys + Right Ctrl.", mLocalCoop->mX + aTextOffsetX, mLocalCoop->mY + aTextOffsetY + 24, FONT_DWARVENTODCRAFT18, fontColor, DS_ALIGN_LEFT);
+#endif
 	}
 }
 
@@ -205,6 +224,14 @@ void MoreSettingsDialog::CheckboxChecked(int theId, bool checked)
 
 			break;
 		}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		case MoreSettingsDialog::MoreSettingsDialog_LocalCoop:
+		{
+			mApp->mLocalCoopEnabled = checked;
+			mApp->RegistryWriteInteger("LocalCoop", checked ? 1 : 0);
+			break;
+		}
+#endif
 		case MoreSettingsDialog::MoreSettingsDialog_AspectStandard:
 		{
 			if (checked) SelectAspectRatio(ASPECT_RATIO_STANDARD);
@@ -255,6 +282,9 @@ void MoreSettingsDialog::ChangePage(MoreSettingsPages thePage)
 
 	mAspectStandard->mVisible = mAspectWidescreen->mVisible = mAspectWidescreenHD->mVisible =
 		mCurPage == MoreSettingsPage_2;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	mLocalCoop->mVisible = mCurPage == MoreSettingsPage_2;
+#endif
 
 	Resize(mX, mY, mWidth, mHeight);
 }

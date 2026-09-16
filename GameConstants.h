@@ -26,6 +26,17 @@ const int           SEED_PACKET_HEIGHT = 70;
 const int           IMITATER_DIALOG_WIDTH = 500;
 const int           IMITATER_DIALOG_HEIGHT = 600;
 
+// ============================================================
+// ■ 本地双人（同机）相关
+// ============================================================
+const int           MAX_LAWN_PLAYERS = 2;
+const int           VIRTUAL_CURSOR_SPEED = 9;			// 玩家二虚拟光标每帧移动的像素数
+const int           GAMEPAD_STICK_DEADZONE = 8000;		// 摇杆死区，单位为 SDL 的轴量程
+const int           GAMEPAD_RESCAN_INTERVAL = 100;		// 未检测到手柄时的重扫间隔（帧）
+const int           LOCAL_PLAYER_2_START_X = 400;
+const int           LOCAL_PLAYER_2_START_Y = 300;
+const int           LOCAL_PLAYER_2_SEEDBANK_Y = 512;	// 玩家二的卡槽摆在屏幕底部
+
 const int			WIDESCREEN_OFFSETX = -240;
 const int			WIDESCREEN_OFFSETY = -60;
 
@@ -109,6 +120,8 @@ const int           STORESCREEN_PAGESTRING_Y = 500;
 #define _DS_MINIGAMES
 #define _CONSOLE_MINIGAMES
 #define _REPLANTED_SPEED_CONTROL
+// 主机版的本地双人模式。只包含同机双人，不含任何联机代码。
+#define _HAS_LOCAL_MULTIPLAYER
 //#define _HAS_NEW_GIGA_ZOMBIES
 //#define _HAS_SCORE_SYSTEM
 

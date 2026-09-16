@@ -70,6 +70,9 @@ Board::Board(LawnApp* theApp)
 	mCursorObject = new CursorObject();
 	mCursorPreview = new CursorPreview();
 	mSeedBank = new SeedBank();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	mActivePlayerIndex = 0;
+#endif
 	mCutScene = new CutScene();
 	mSpecialGraveStoneX = -1;
 	mSpecialGraveStoneY = -1;
@@ -293,6 +296,12 @@ Board::~Board()
 	delete mCursorObject;
 	delete mCursorPreview;
 	delete mSeedBank;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	delete mPlayer2.mCursorObject;
+	delete mPlayer2.mSeedBank;
+	mPlayer2.mCursorObject = nullptr;
+	mPlayer2.mSeedBank = nullptr;
+#endif
 	if (mMenuButton)
 	{
 		delete mMenuButton;
@@ -6979,6 +6988,14 @@ void Board::Update()
 	}
 	mCursorPreview->Update();
 	mCursorObject->Update();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 卡牌是在选卡界面结束之后才填进卡槽的，所以玩家二的那一份要等到真正开始游戏时再建立
+	if (mApp->mLocalCoopEnabled && !mPlayer2.mActive && mApp->mGameScene == GameScenes::SCENE_PLAYING)
+	{
+		InitLocalMultiplayer();
+	}
+	UpdateLocalPlayers();
+#endif
 	mPrevMouseX = mApp->mWidgetManager->mLastMouseX;
 	mPrevMouseY = mApp->mWidgetManager->mLastMouseY;
 }
@@ -8780,6 +8797,13 @@ void Board::DrawUIBottom(Graphics* g)
 			mSeedBank->EndDraw(g);
 		}
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		if (!mApp->IsScreenSaver())
+		{
+			DrawPlayer2SeedBank(g);
+		}
+#endif
+
 #ifdef _DS_MINIGAMES
 		if (mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_HEAT_WAVE && mApp->mGameScene == SCENE_PLAYING) {
 			int aCelWidth = Sexy::IMAGE_FLAGMETER->GetCelWidth();
@@ -9593,6 +9617,9 @@ void Board::DrawUITop(Graphics* g)
 		mCursorObject->Draw(g);
 		mCursorObject->EndDraw(g);
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	DrawPlayer2Cursor(g);
+#endif
 
 	mToolTip->Draw(g);
 	DrawDebugText(g);
@@ -12239,3 +12266,178 @@ void Board::ButtonDepress(int theId)
 	}
 #endif
 }
+// ====================================================================================================
+// ▲ 本地双人（同机）支持
+// ----------------------------------------------------------------------------------------------------
+// Board 的绝大部分代码都只认识“一个光标、一套卡槽、一份阳光”。这里不去改写那上万行逻辑，
+// 而是在处理玩家二的输入与绘制之前，把它的那一套状态与 Board 的成员交换进来，
+// 处理完再换回去；对被调用的旧代码而言，它永远只是在服务“当前玩家”。
+// 玩家二的输入先被采样成 PlayerInputState（见 LawnPlayer.h），再在这里翻译成点击事件，
+// 因此输入来源是可替换的——但本分支中不存在任何网络代码。
+// ====================================================================================================
+int Board::GetPlayerPointerX(int thePlayerIndex)
+{
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (thePlayerIndex > 0)
+		return mPlayer2.mInput.mPointerX;
+#endif
+	return mApp->mWidgetManager->mLastMouseX;
+}
+
+int Board::GetPlayerPointerY(int thePlayerIndex)
+{
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (thePlayerIndex > 0)
+		return mPlayer2.mInput.mPointerY;
+#endif
+	return mApp->mWidgetManager->mLastMouseY;
+}
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+bool Board::IsLocalMultiplayer()
+{
+	return mApp->mLocalCoopEnabled && mPlayer2.mActive;
+}
+
+//	在关卡开始时为玩家二准备好光标与卡槽
+void Board::InitLocalMultiplayer()
+{
+	mActivePlayerIndex = 0;
+	mPlayer2.Reset(1);
+
+	if (!mApp->mLocalCoopEnabled || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN ||
+		mApp->IsChallengeWithoutSeedBank() || HasConveyorBeltSeedBank() || mApp->IsSlotMachineLevel())
+		return;
+
+	if (mPlayer2.mCursorObject == nullptr)
+	{
+		mPlayer2.mCursorObject = new CursorObject();
+		mPlayer2.mCursorObject->mPlayerIndex = 1;
+	}
+	if (mPlayer2.mSeedBank == nullptr)
+	{
+		mPlayer2.mSeedBank = new SeedBank();
+	}
+	mPlayer2.mSeedBank->mY = LOCAL_PLAYER_2_SEEDBANK_Y;
+	mPlayer2.mActive = true;
+
+	// 主机版的合作模式中两名玩家各有一份卡槽且阳光互不相通。这里让玩家二拿到与
+	// 玩家一相同的一套卡牌（各自独立的冷却），而不是再开一个选卡界面。
+	SwapPlayerContext();
+	mSeedBank->UpdateWidth();
+	for (int i = 0; i < SEEDBANK_MAX; i++)
+	{
+		SeedPacket* aPacket = &mSeedBank->mSeedPackets[i];
+		aPacket->mIndex = i;
+		aPacket->mX = GetSeedPacketPositionX(i);
+		aPacket->mY = 8;
+		aPacket->mPacketType = SeedType::SEED_NONE;
+	}
+	SwapPlayerContext();
+
+	for (int i = 0; i < SEEDBANK_MAX; i++)
+	{
+		mPlayer2.mSeedBank->mSeedPackets[i].SetPacketType(
+			mSeedBank->mSeedPackets[i].mPacketType, mSeedBank->mSeedPackets[i].mImitaterType);
+	}
+	mPlayer2.mSunMoney = mSunMoney;
+}
+
+//	在“玩家一的状态”与“玩家二的状态”之间来回切换
+void Board::SwapPlayerContext()
+{
+	if (mPlayer2.mCursorObject == nullptr || mPlayer2.mSeedBank == nullptr)
+		return;
+
+	CursorObject* aCursorObject = mCursorObject;
+	mCursorObject = mPlayer2.mCursorObject;
+	mPlayer2.mCursorObject = aCursorObject;
+
+	SeedBank* aSeedBank = mSeedBank;
+	mSeedBank = mPlayer2.mSeedBank;
+	mPlayer2.mSeedBank = aSeedBank;
+
+	int aSunMoney = mSunMoney;
+	mSunMoney = mPlayer2.mSunMoney;
+	mPlayer2.mSunMoney = aSunMoney;
+
+	mActivePlayerIndex = mActivePlayerIndex == 0 ? 1 : 0;
+}
+
+//	采样玩家二的输入，并把它翻译成与鼠标完全一致的点击序列
+void Board::UpdateLocalPlayers()
+{
+	if (!IsLocalMultiplayer())
+		return;
+
+	// 虚拟光标限制在棋盘控件的范围内，宽屏下这就是被拉宽后的那块区域
+	mPlayer2.UpdateInput(mWidth > 0 ? mWidth : BOARD_WIDTH, mHeight > 0 ? mHeight : BOARD_HEIGHT);
+
+	SwapPlayerContext();
+
+	// 输入快照不参与互换，始终留在 mPlayer2 上
+	const PlayerInputState& aInput = mPlayer2.mInput;
+	const int aPosX = aInput.mPointerX;
+	const int aPosY = aInput.mPointerY;
+
+	MouseMove(aPosX, aPosY);
+	if (aInput.PrimaryPressed())
+	{
+		MouseDown(aPosX, aPosY, 1);
+	}
+	else if (aInput.PrimaryReleased())
+	{
+		MouseUp(aPosX, aPosY, 1);
+	}
+	if (aInput.SecondaryPressed())
+	{
+		// 与鼠标右键一致：拿起或放下铲子
+		if (mCursorObject->mCursorType == CursorType::CURSOR_TYPE_SHOVEL)
+		{
+			ClearCursor();
+			mApp->PlayFoley(FoleyType::FOLEY_DROP);
+		}
+		else if (mCursorObject->mCursorType == CursorType::CURSOR_TYPE_NORMAL)
+		{
+			mCursorObject->mCursorType = CursorType::CURSOR_TYPE_SHOVEL;
+			mApp->PlayFoley(FoleyType::FOLEY_SHOVEL);
+		}
+	}
+
+	mCursorObject->Update();
+	for (int i = 0; i < mSeedBank->mNumPackets; i++)
+	{
+		mSeedBank->mSeedPackets[i].Update();
+	}
+
+	SwapPlayerContext();
+}
+
+void Board::DrawPlayer2SeedBank(Graphics* g)
+{
+	if (!IsLocalMultiplayer() || mApp->mGameScene == GameScenes::SCENE_ZOMBIES_WON)
+		return;
+
+	SwapPlayerContext();
+	if (mSeedBank->BeginDraw(g))
+	{
+		mSeedBank->Draw(g);
+		mSeedBank->EndDraw(g);
+	}
+	SwapPlayerContext();
+}
+
+void Board::DrawPlayer2Cursor(Graphics* g)
+{
+	if (!IsLocalMultiplayer() || mTimeStopCounter != 0)
+		return;
+
+	SwapPlayerContext();
+	if (mCursorObject->BeginDraw(g))
+	{
+		mCursorObject->Draw(g);
+		mCursorObject->EndDraw(g);
+	}
+	SwapPlayerContext();
+}
+#endif

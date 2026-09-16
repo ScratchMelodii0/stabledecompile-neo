@@ -857,12 +857,19 @@ LawnApp::LawnApp()
 	mVoiceVolume = 0.0f;
 	memset(&mFlowersPlucked, false, sizeof(mFlowersPlucked));
 	mRIPMode = false;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	mLocalCoopEnabled = false;
+#endif
 	mPlayerLevelRef = -1;
 }
 
 //0x44EDD0、0x44EDF0
 LawnApp::~LawnApp()
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	LawnPlayerInput::Shutdown();
+#endif
+
 	if (mBoard)
 	{
 		WriteCurrentUserConfig();
@@ -1139,6 +1146,10 @@ void LawnApp::WriteToRegistry()
 		mPlayerInfo->SaveDetails();
 	}
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	RegistryWriteInteger("LocalCoop", mLocalCoopEnabled ? 1 : 0);
+#endif
+
 	SexyAppBase::WriteToRegistry();
 }
 
@@ -1146,6 +1157,14 @@ void LawnApp::WriteToRegistry()
 void LawnApp::ReadFromRegistry()
 {
 	SexyApp::ReadFromRegistry();
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	int aLocalCoop = 0;
+	if (RegistryReadInteger("LocalCoop", &aLocalCoop))
+	{
+		mLocalCoopEnabled = aLocalCoop != 0;
+	}
+#endif
 }
 
 //0x44F540
