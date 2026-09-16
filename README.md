@@ -22,10 +22,10 @@ A Project focused in making modding both GOTY and OG possible, adding features a
 #### Planned Features
 - [x]  Particle Editor *`In progress`*
 - [ ]  Add Console Minigames and PvP Content
-- [ ]  Font Builder
+- [x]  Font Builder *`tools/FontBuilder`, standalone CLI, see its README`*
 - [ ]  Aspect Ratio Changer / Widescreen
 - [ ]  Implement More-Settings Screen
-- [ ]  Unicode Support for Multi Lang.
+- [x]  Unicode Support for Multi Lang. *`UTF-8 aware SDL3Font rendering + string conversion`*
 
 # DISCLAIMER
 
