@@ -212,7 +212,7 @@ bool XMLParser::GetUTF16LEChar(wchar_t* theChar, bool* error)
 		if (p_fread(&aNextChar, 2, 1, mFile) != 1)
 			return false;
 
-		aNextChar = WORD_LITTLEE_TO_NATIVE(aTempChar);
+		aNextChar = WORD_LITTLEE_TO_NATIVE(aNextChar);
 		if ((aNextChar & 0xDC00) == 0xDC00)
 		{
 			*theChar = (wchar_t)((((aTempChar & ~0xD800) << 10) | (aNextChar & ~0xDC00)) + 0x10000);
@@ -237,7 +237,7 @@ bool XMLParser::GetUTF16BEChar(wchar_t* theChar, bool* error)
 		if (p_fread(&aNextChar, 2, 1, mFile) != 1)
 			return false;
 
-		aNextChar = WORD_BIGE_TO_NATIVE(aTempChar);
+		aNextChar = WORD_BIGE_TO_NATIVE(aNextChar);
 		if ((aNextChar & 0xDC00) == 0xDC00)
 		{
 			*theChar = (wchar_t)((((aTempChar & ~0xD800) << 10) | (aNextChar & ~0xDC00)) + 0x10000);
