@@ -22,6 +22,7 @@ CursorObject::CursorObject()
     mGlovePlantID = PlantID::PLANTID_NULL;
     mReanimCursorID = ReanimationID::REANIMATIONID_NULL;
     mPreviewCursorID = ReanimationID::REANIMATIONID_NULL;
+    mPlayerIndex = 0;
     
     if (mApp->IsWhackAZombieLevel())
     {
@@ -46,7 +47,8 @@ void CursorObject::Update()
         return;
     }
 
-    if (!mApp->mWidgetManager->mMouseIn)
+    // 玩家二的虚拟光标不跟随系统鼠标，鼠标离开窗口也应继续显示
+    if (mPlayerIndex == 0 && !mApp->mWidgetManager->mMouseIn)
     {
         mVisible = false;
         return;
@@ -59,8 +61,8 @@ void CursorObject::Update()
     }
 
     mVisible = true;
-    mX = mApp->mWidgetManager->mLastMouseX - 25;
-    mY = mApp->mWidgetManager->mLastMouseY - 35;
+    mX = mBoard->GetPlayerPointerX(mPlayerIndex) - 25;
+    mY = mBoard->GetPlayerPointerY(mPlayerIndex) - 35;
 }
 
 void CursorObject::Die()

@@ -494,6 +494,9 @@
     <ClCompile Include="..\Lawn\CursorObject.cpp">
       <Filter>Lawn\Board\Board Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\Lawn\LawnPlayer.cpp">
+      <Filter>Lawn\Board\Board Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\Lawn\Widget\CheatDialog.cpp">
       <Filter>Lawn\Widget\Widget Source</Filter>
     </ClCompile>
@@ -1088,6 +1091,9 @@
       <Filter>Lawn\Board\Board Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Lawn\CursorObject.h">
+      <Filter>Lawn\Board\Board Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Lawn\LawnPlayer.h">
       <Filter>Lawn\Board\Board Include</Filter>
     </ClInclude>
     <ClInclude Include="..\Lawn\Cutscene.h">

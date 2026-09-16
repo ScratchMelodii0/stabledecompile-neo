@@ -5,6 +5,7 @@
 #include "../../SexyAppFramework/ButtonListener.h"
 #include "../../SexyAppFramework/CheckboxListener.h"
 #include "LawnDialog.h"
+#include "../../GameConstants.h"
 
 class LawnApp;
 class LawnStoneButton;
@@ -29,6 +30,9 @@ private:
 		MoreSettingsDialog_AspectStandard,
 		MoreSettingsDialog_AspectWidescreen,
 		MoreSettingsDialog_AspectWidescreenHD,
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		MoreSettingsDialog_LocalCoop,
+#endif
 	};
 
 	enum MoreSettingsPages {
@@ -52,6 +56,10 @@ public:
 	Checkbox*			mAspectStandard;
 	Checkbox*			mAspectWidescreen;
 	Checkbox*			mAspectWidescreenHD;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 同机双人合作（无联机）
+	Checkbox*			mLocalCoop;
+#endif
 
 public:
 	MoreSettingsDialog(LawnApp* theApp);

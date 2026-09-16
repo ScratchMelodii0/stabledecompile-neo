@@ -17,6 +17,7 @@ public:
 	int						mHammerDownCounter;		//+0x44
 	ReanimationID			mReanimCursorID;		//+0x48
 	ReanimationID			mPreviewCursorID;
+	int						mPlayerIndex;			// 本地双人时标记该光标属于哪位玩家，单人下恒为 0
 
 public:
 	CursorObject();

@@ -163,6 +163,9 @@ public:
 
 	int								mPlayerLevelRef;
 	bool                            mEnableFPS;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	bool							mLocalCoopEnabled;		// 同机双人合作（无联机）
+#endif
 
 public:
 	LawnApp();

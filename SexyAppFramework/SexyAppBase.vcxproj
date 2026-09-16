@@ -534,6 +534,7 @@ EXIT /B 0</Command>
     <ClCompile Include="..\Lawn\CursorObject.cpp" />
     <ClCompile Include="..\Lawn\CutScene.cpp" />
     <ClCompile Include="..\Lawn\LawnMower.cpp" />
+    <ClCompile Include="..\Lawn\LawnPlayer.cpp" />
     <ClCompile Include="..\Lawn\Projectile.cpp" />
     <ClCompile Include="..\Lawn\System\DataSync.cpp" />
     <ClCompile Include="..\Lawn\System\Music.cpp" />
@@ -1285,6 +1286,7 @@ EXIT /B 0</Command>
     <ClInclude Include="..\Lawn\Coin.h" />
     <ClInclude Include="..\ConstEnums.h" />
     <ClInclude Include="..\Lawn\CursorObject.h" />
+    <ClInclude Include="..\Lawn\LawnPlayer.h" />
     <ClInclude Include="..\Lawn\Cutscene.h" />
     <ClInclude Include="..\Sexy.TodLib\DataArray.h" />
     <ClInclude Include="..\Sexy.TodLib\Definition.h" />
