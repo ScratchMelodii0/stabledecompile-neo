@@ -203,6 +203,7 @@ enum CoinType
     COIN_PRESENT_SURVIVAL_MODE,
 #ifdef _HAS_LOCAL_MULTIPLAYER
     COIN_BRAIN,                 // 对战模式中僵尸一方的“阳光”，掉落在僵尸一侧的几列上
+    COIN_SUN_COOP,              // 合作模式中偶尔掉落的双人阳光，两名玩家一起压住才收得走
 #endif
 };
 enum CrazyDaveState

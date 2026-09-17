@@ -6252,6 +6252,15 @@ void Board::UpdateSunSpawning()
 		aSunMaxX = GridToPixelX(VERSUS_PLANT_COLUMNS, 0) - 60;
 	}
 #endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 合作模式中每隔若干颗天降阳光就有一颗是双人阳光，两名玩家一起压住它才收得走。
+	// 对战模式不适用：那里两边的钱本来就是分开的。
+	if (IsLocalMultiplayer() && !mApp->IsVersusMode() && aSunType == CoinType::COIN_SUN &&
+		Rand(COOP_DOUBLE_SUN_CHANCE) == 0)
+	{
+		aSunType = CoinType::COIN_SUN_COOP;
+	}
+#endif
 	AddCoin(RandRangeInt(100, aSunMaxX), 60, aSunType, CoinMotion::COIN_MOTION_FROM_SKY);
 }
 
