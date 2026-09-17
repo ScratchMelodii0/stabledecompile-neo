@@ -19,8 +19,10 @@ private:
     enum
     {
         ChallengeScreen_Back = 100,
+        // 关卡按钮的控件号是 ChallengeScreen_Mode + 挑战序号，挑战序号如今已经过百，
+        // 所以页按钮的起始号必须离得够远，否则两段号码会撞在一起。
         ChallengeScreen_Mode = 200,
-        ChallengeScreen_Page = 300
+        ChallengeScreen_Page = 1000
     };
 
 public:
