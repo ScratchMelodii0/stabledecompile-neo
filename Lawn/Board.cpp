@@ -737,7 +737,11 @@ void Board::PickZombieWaves()
 			mNumWaves = 0;
 		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_WHACK_A_ZOMBIE)
 			mNumWaves = 12;
-		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING || aGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID ||
+		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING ||
+#ifdef _HAS_LOCAL_MULTIPLAYER
+				 aGameMode == GameMode::GAMEMODE_COOP_BOWLING ||
+#endif
+				 aGameMode == GameMode::GAMEMODE_CHALLENGE_AIR_RAID ||
 				 aGameMode == GameMode::GAMEMODE_CHALLENGE_GRAVE_DANGER || aGameMode == GameMode::GAMEMODE_CHALLENGE_HIGH_GRAVITY ||
 				 aGameMode == GameMode::GAMEMODE_CHALLENGE_PORTAL_COMBAT || aGameMode == GameMode::GAMEMODE_CHALLENGE_WAR_AND_PEAS ||
 				 aGameMode == GameMode::GAMEMODE_CHALLENGE_INVISIGHOUL 
@@ -1132,6 +1136,9 @@ void Board::PickBackground()
 #endif
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	case GameMode::GAMEMODE_VERSUS:
+	case GameMode::GAMEMODE_COOP_DAY:
+	case GameMode::GAMEMODE_COOP_HARD_DAY:
+	case GameMode::GAMEMODE_COOP_BOWLING:
 #endif
 		mBackground = BackgroundType::BACKGROUND_1_DAY;
 		break;
@@ -1172,6 +1179,10 @@ void Board::PickBackground()
 #ifdef _DS_MINIGAMES
 	case GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP:
 #endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	case GameMode::GAMEMODE_COOP_NIGHT:
+	case GameMode::GAMEMODE_COOP_HARD_NIGHT:
+#endif
 		mBackground = BackgroundType::BACKGROUND_2_NIGHT;
 		break;
 
@@ -1194,6 +1205,12 @@ void Board::PickBackground()
 #endif
 	case GameMode::GAMEMODE_LAST_STAND_STAGE_3:
 	case GameMode::GAMEMODE_LAST_STAND_ENDLESS_STAGE_3:
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 主机版的合作无尽关也在泳池
+	case GameMode::GAMEMODE_COOP_POOL:
+	case GameMode::GAMEMODE_COOP_HARD_POOL:
+	case GameMode::GAMEMODE_COOP_ENDLESS:
+#endif
 		mBackground = BackgroundType::BACKGROUND_3_POOL;
 		break;
 
@@ -1218,6 +1235,10 @@ void Board::PickBackground()
 	case GameMode::GAMEMODE_CHALLENGE_BUNGEE_BLITZ:
 	case GameMode::GAMEMODE_LAST_STAND_STAGE_5:
 	case GameMode::GAMEMODE_LAST_STAND_ENDLESS_STAGE_5:
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	case GameMode::GAMEMODE_COOP_ROOF:
+	case GameMode::GAMEMODE_COOP_HARD_ROOF:
+#endif
 		mBackground = BackgroundType::BACKGROUND_5_ROOF;
 		break;
 
@@ -1225,6 +1246,9 @@ void Board::PickBackground()
 	case GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_6:
 	case GameMode::GAMEMODE_SURVIVAL_HARD_STAGE_6:
 	case GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_6:
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	case GameMode::GAMEMODE_COOP_ZOMBOSS:
+#endif
 		mBackground = BackgroundType::BACKGROUND_6_BOSS;
 		break;
 
@@ -6006,7 +6030,7 @@ void Board::SurvivalSaveScore()
 		return;
 
 	int aFlagsCompleted = GetSurvivalFlagsCompleted();
-	int& aFlagsRecord = mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()];
+	int& aFlagsRecord = mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex());
 	if (aFlagsCompleted > aFlagsRecord)
 	{
 		aFlagsRecord = aFlagsCompleted;
@@ -6021,7 +6045,7 @@ void Board::PuzzleSaveStreak()
 		return;
 
 	int aStreak = mChallenge->mSurvivalStage + 1;
-	int& aRecord = mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()];
+	int& aRecord = mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex());
 	if (aStreak > aRecord)
 	{
 		aRecord = aStreak;
@@ -6137,6 +6161,13 @@ bool Board::IsFinalSurvivalStage()
 		return false;
 
 	int aFlags = GetNumWavesPerSurvivalStage() * (mChallenge->mSurvivalStage + 1) / GetNumWavesPerFlag();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 合作模式的普通关只打两到三面旗；困难关走下面生存困难关的十面旗
+	if (mApp->IsCoopLevel(mApp->mGameMode) && mApp->IsSurvivalNormal(mApp->mGameMode))
+	{
+		return aFlags >= mApp->GetCoopSurvivalFlags(mApp->mGameMode);
+	}
+#endif
 	if (mApp->IsSurvivalNormal(mApp->mGameMode))
 	{
 		return aFlags >= 5;
@@ -7045,7 +7076,7 @@ void Board::Update()
 	mCursorObject->Update();
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	// 卡牌是在选卡界面结束之后才填进卡槽的，所以玩家二的那一份要等到真正开始游戏时再建立
-	if ((mApp->mLocalCoopEnabled || mApp->IsVersusMode()) && !mPlayer2.mActive && mApp->mGameScene == GameScenes::SCENE_PLAYING)
+	if ((mApp->IsCoopActive() || mApp->IsVersusMode()) && !mPlayer2.mActive && mApp->mGameScene == GameScenes::SCENE_PLAYING)
 	{
 		InitLocalMultiplayer();
 	}
@@ -10149,47 +10180,47 @@ void Board::KeyChar(SexyChar theChar)
 		}
 		else if (theChar == _S('0'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 0;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 0;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('1'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 9;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 9;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('2'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 19;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 19;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('3'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 29;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 29;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('4'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 39;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 39;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('5'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 49;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 49;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('6'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 98;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 98;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('7'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 498;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 498;
 			mChallenge->TreeOfWisdomGrow();
 		}
 		else if (theChar == _S('8'))
 		{
-			mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = 998;
+			mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = 998;
 			mChallenge->TreeOfWisdomGrow();
 		}
 
@@ -12366,7 +12397,7 @@ int Board::GetPlayerPointerY(int thePlayerIndex)
 bool Board::IsLocalMultiplayer()
 {
 	// 合作与对战都是同机双人，玩家二的那一套状态与输入是完全共用的
-	return (mApp->mLocalCoopEnabled || mApp->IsVersusMode()) && mPlayer2.mActive;
+	return (mApp->IsCoopActive() || mApp->IsVersusMode()) && mPlayer2.mActive;
 }
 
 //	在关卡开始时为玩家二准备好光标与卡槽
@@ -12375,8 +12406,8 @@ void Board::InitLocalMultiplayer()
 	mActivePlayerIndex = 0;
 	mPlayer2.Reset(1);
 
-	if ((!mApp->mLocalCoopEnabled && !mApp->IsVersusMode()) || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN ||
-		mApp->IsChallengeWithoutSeedBank() || HasConveyorBeltSeedBank() || mApp->IsSlotMachineLevel())
+	if ((!mApp->IsCoopActive() && !mApp->IsVersusMode()) || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN ||
+		mApp->IsChallengeWithoutSeedBank() || mApp->IsSlotMachineLevel())
 		return;
 
 	if (mPlayer2.mCursorObject == nullptr)
@@ -12384,6 +12415,15 @@ void Board::InitLocalMultiplayer()
 		mPlayer2.mCursorObject = new CursorObject();
 		mPlayer2.mCursorObject->mPlayerIndex = 1;
 	}
+
+	// 传送带关卡（合作保龄球、合作僵王博士等）两名玩家共用同一条传送带，玩家二没有
+	// 自己的卡槽，也就不需要自己的钱包——传送带上的卡片本来就是免费的。
+	if (HasConveyorBeltSeedBank())
+	{
+		mPlayer2.mActive = true;
+		return;
+	}
+
 	if (mPlayer2.mSeedBank == nullptr)
 	{
 		mPlayer2.mSeedBank = new SeedBank();
@@ -12424,12 +12464,18 @@ void Board::InitLocalMultiplayer()
 //	在“玩家一的状态”与“玩家二的状态”之间来回切换
 void Board::SwapPlayerContext()
 {
-	if (mPlayer2.mCursorObject == nullptr || mPlayer2.mSeedBank == nullptr)
+	if (mPlayer2.mCursorObject == nullptr)
 		return;
 
 	CursorObject* aCursorObject = mCursorObject;
 	mCursorObject = mPlayer2.mCursorObject;
 	mPlayer2.mCursorObject = aCursorObject;
+
+	mActivePlayerIndex = mActivePlayerIndex == 0 ? 1 : 0;
+
+	// 共用传送带的关卡里玩家二没有自己的卡槽与钱包，只换光标
+	if (mPlayer2.mSeedBank == nullptr)
+		return;
 
 	SeedBank* aSeedBank = mSeedBank;
 	mSeedBank = mPlayer2.mSeedBank;
@@ -12438,8 +12484,6 @@ void Board::SwapPlayerContext()
 	int aSunMoney = mSunMoney;
 	mSunMoney = mPlayer2.mSunMoney;
 	mPlayer2.mSunMoney = aSunMoney;
-
-	mActivePlayerIndex = mActivePlayerIndex == 0 ? 1 : 0;
 }
 
 //	采样玩家二的输入，并把它翻译成与鼠标完全一致的点击序列
@@ -12483,9 +12527,13 @@ void Board::UpdateLocalPlayers()
 	}
 
 	mCursorObject->Update();
-	for (int i = 0; i < mSeedBank->mNumPackets; i++)
+	// 共用传送带的关卡里卡片只属于玩家一的那一份卡槽，交给主循环更新一次即可
+	if (mPlayer2.mSeedBank != nullptr)
 	{
-		mSeedBank->mSeedPackets[i].Update();
+		for (int i = 0; i < mSeedBank->mNumPackets; i++)
+		{
+			mSeedBank->mSeedPackets[i].Update();
+		}
 	}
 
 	SwapPlayerContext();
@@ -12493,7 +12541,8 @@ void Board::UpdateLocalPlayers()
 
 void Board::DrawPlayer2SeedBank(Graphics* g)
 {
-	if (!IsLocalMultiplayer() || mApp->mGameScene == GameScenes::SCENE_ZOMBIES_WON)
+	if (!IsLocalMultiplayer() || mApp->mGameScene == GameScenes::SCENE_ZOMBIES_WON ||
+		mPlayer2.mSeedBank == nullptr)
 		return;
 
 	SwapPlayerContext();

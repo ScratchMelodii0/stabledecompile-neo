@@ -127,7 +127,12 @@ enum ChallengePage
     CHALLENGE_PAGE_LIMBO_CHALLENGE = 3,
     CHALLENGE_PAGE_PUZZLE = 4,
     CHALLENGE_PAGE_LAST_STAND = 5,
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    CHALLENGE_PAGE_COOP = 6,
+    MAX_CHALLANGE_PAGES = 7
+#else
     MAX_CHALLANGE_PAGES = 6
+#endif
 };
 enum ChallengeState
 {
@@ -496,9 +501,27 @@ enum GameMode
 #endif
 #ifdef _HAS_LOCAL_MULTIPLAYER
     GAMEMODE_VERSUS,
+    // 主机版专有的十一个合作关卡。普通关只打两到三面旗，困难关与生存模式的困难关完全相同，
+    // 没有迷雾变体。顺序即为主机版菜单中的顺序，不要打乱：gChallengeDefs 与本枚举逐项对齐。
+    GAMEMODE_COOP_DAY,
+    GAMEMODE_COOP_NIGHT,
+    GAMEMODE_COOP_POOL,
+    GAMEMODE_COOP_ROOF,
+    GAMEMODE_COOP_BOWLING,
+    GAMEMODE_COOP_HARD_DAY,
+    GAMEMODE_COOP_HARD_NIGHT,
+    GAMEMODE_COOP_HARD_POOL,
+    GAMEMODE_COOP_HARD_ROOF,
+    GAMEMODE_COOP_ZOMBOSS,
+    GAMEMODE_COOP_ENDLESS,
 #endif
     NUM_GAME_MODES
 };
+#ifdef _HAS_LOCAL_MULTIPLAYER
+// 合作关卡在挑战序号上的位置与数量（挑战序号 = 游戏模式 - GAMEMODE_SURVIVAL_NORMAL_STAGE_1）
+#define COOP_CHALLENGE_RECORD_BASE  ((int)GameMode::GAMEMODE_COOP_DAY - (int)GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1)
+#define NUM_COOP_CHALLENGE_RECORDS  ((int)GameMode::GAMEMODE_COOP_ENDLESS - (int)GameMode::GAMEMODE_COOP_DAY + 1)
+#endif
 enum GameObjectType
 {
     OBJECT_TYPE_NONE,

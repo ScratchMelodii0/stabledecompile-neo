@@ -52,7 +52,7 @@ void PlayerInfo::SyncDetails(DataSync& theSync)
 	SafeSync(theSync.SyncLong(mLevel));
 	SafeSync(theSync.SyncLong(mCoins));
 	SafeSync(theSync.SyncLong(mFinishedAdventure));
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < MAX_CHALLENGE_RECORDS; i++)
 	{
 		SafeSync(theSync.SyncLong(mChallengeRecords[i]));
 	}
@@ -108,6 +108,14 @@ void PlayerInfo::SyncDetails(DataSync& theSync)
 #endif
 	SafeSync(theSync.SyncBool(mDidRIPMode));
 	SafeSync(theSync.SyncLong(mRIPLevel));
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 追加在最末尾：读旧存档时这里会抛出并被 SafeSync 吞掉，合作成绩保持 Reset() 的零值。
+	for (int i = 0; i < NUM_COOP_CHALLENGE_RECORDS; i++)
+	{
+		SafeSync(theSync.SyncLong(mCoopRecords[i]));
+	}
+#endif
 }
 
 //0x469400
@@ -168,6 +176,9 @@ void PlayerInfo::Reset()
 	mCoins = 0;
 	mFinishedAdventure = 0;
 	memset(mChallengeRecords, 0, sizeof(mChallengeRecords));
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	memset(mCoopRecords, 0, sizeof(mCoopRecords));
+#endif
 	memset(mPurchases, 0, sizeof(mPurchases));
 	mPlayTimeActivePlayer = 0;
 	mPlayTimeInactivePlayer = 0;
@@ -218,7 +229,21 @@ void PlayerInfo::ResetChallengeRecord(GameMode theGameMode)
 {
 	int aGameMode = (int)theGameMode - (int)GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1;
 	TOD_ASSERT(aGameMode >= 0 && aGameMode <= NUM_CHALLENGE_MODES);
-	mChallengeRecords[aGameMode] = 0;
+	ChallengeRecordRef(aGameMode) = 0;
+}
+
+//	合作关卡的挑战序号落在 mChallengeRecords 的容量之外，改由 mCoopRecords 承接
+int& PlayerInfo::ChallengeRecordRef(int theChallengeIndex)
+{
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	int aCoopIndex = theChallengeIndex - COOP_CHALLENGE_RECORD_BASE;
+	if (aCoopIndex >= 0 && aCoopIndex < NUM_COOP_CHALLENGE_RECORDS)
+	{
+		return mCoopRecords[aCoopIndex];
+	}
+#endif
+	TOD_ASSERT(theChallengeIndex >= 0 && theChallengeIndex < MAX_CHALLENGE_RECORDS);
+	return mChallengeRecords[ClampInt(theChallengeIndex, 0, MAX_CHALLENGE_RECORDS - 1)];
 }
 
 //0x469A00

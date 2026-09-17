@@ -2954,7 +2954,12 @@ void Challenge::InitZombieWaves()
 	}
 	else if (mApp->IsWallnutBowlingLevel())
 	{
-		if (aGameMode == GAMEMODE_CHALLENGE_WALLNUT_BOWLING || mApp->IsAdventureMode())
+		if (aGameMode == GAMEMODE_CHALLENGE_WALLNUT_BOWLING || mApp->IsAdventureMode()
+#ifdef _HAS_LOCAL_MULTIPLAYER
+			// 合作保龄球关与原版保龄球关的出怪表相同
+			|| aGameMode == GAMEMODE_COOP_BOWLING
+#endif
+			)
 		{
 			aList[ZOMBIE_NORMAL] = true;
 			aList[ZOMBIE_TRAFFIC_CONE] = true;
@@ -5834,7 +5839,7 @@ bool Challenge::TreeOfWisdomMouseOn(int theX, int theY)
 
 int Challenge::TreeOfWisdomGetSize()
 {
-	return mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()];
+	return mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex());
 }
 
 //0x42CA30
@@ -5945,7 +5950,7 @@ void Challenge::TreeOfWisdomInit()
 	aReanimTree->SetTruncateDisappearingFrames(nullptr, false);
 	mReanimChallenge = mApp->ReanimationGetID(aReanimTree);
 
-	mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] = max(1, mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()]);
+	mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) = max(1, mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()));
 
 	int aTreeSize = ClampInt(TreeOfWisdomGetSize(), 1, 51);
 	aReanimTree->PlayReanim(StrFormat("anim_grow%d", aTreeSize).c_str(), REANIM_PLAY_ONCE_AND_HOLD, 0, 18.0f);
@@ -5986,9 +5991,9 @@ void Challenge::TreeOfWisdomInit()
 //0x42D1F0
 void Challenge::TreeOfWisdomGrow()
 {
-	if (mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()] != INT_MAX)
+	if (mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex()) != INT_MAX)
 	{
-		mApp->mPlayerInfo->mChallengeRecords[mApp->GetCurrentChallengeIndex()]++;
+		mApp->mPlayerInfo->ChallengeRecordRef(mApp->GetCurrentChallengeIndex())++;
 	}
 	int aTreeSize = TreeOfWisdomGetSize();
 	mApp->ReanimationGet(mReanimChallenge)->PlayReanim(StrFormat("anim_grow%d", ClampInt(aTreeSize, 1, 51)).c_str(), REANIM_PLAY_ONCE_AND_HOLD, 0, 8.0f);
