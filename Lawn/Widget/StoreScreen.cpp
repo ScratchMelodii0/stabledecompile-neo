@@ -1023,7 +1023,8 @@ void StoreScreen::PurchaseItem(StoreItem theStoreItem)
             else if (theStoreItem == STORE_ITEM_TREE_OF_WISDOM)
             {
                 mApp->mPlayerInfo->mPurchases[theStoreItem] = 1;
-                mApp->mPlayerInfo->mChallengeRecords[GAMEMODE_TREE_OF_WISDOM] = 1;
+                // mChallengeRecords 的下标是挑战序号而不是游戏模式本身
+                mApp->mPlayerInfo->ChallengeRecordRef(GAMEMODE_TREE_OF_WISDOM - GAMEMODE_SURVIVAL_NORMAL_STAGE_1) = 1;
 
                 LawnDialog* aDialog = (LawnDialog*)mApp->DoDialog(
                     DIALOG_STORE_PURCHASE, 
