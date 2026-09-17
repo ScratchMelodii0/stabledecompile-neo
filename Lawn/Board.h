@@ -370,6 +370,7 @@ public:
 	int								GetSeedPacketPositionX(int theIndex);
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	bool							IsLocalMultiplayer();
+	bool							HasSplitSeedChooser();
 	void							InitLocalMultiplayer();
 	void							SwapPlayerContext();
 	void							UpdateLocalPlayers();

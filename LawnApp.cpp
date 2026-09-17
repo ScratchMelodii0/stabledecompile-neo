@@ -2459,7 +2459,7 @@ bool LawnApp::UpdatePlayerProfileForFinishingLevel()
 	else if (IsPuzzleMode())
 	{
 		aUnlockedNewChallenge = !HasBeatenChallenge(mGameMode);
-		mPlayerInfo->mChallengeRecords[GetCurrentChallengeIndex()]++;
+		mPlayerInfo->ChallengeRecordRef(GetCurrentChallengeIndex())++;
 
 		if (!HasFinishedAdventure() && (mGameMode == GameMode::GAMEMODE_SCARY_POTTER_3 || mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_3))
 		{
@@ -2481,7 +2481,7 @@ bool LawnApp::UpdatePlayerProfileForFinishingLevel()
 	else
 	{
 		aUnlockedNewChallenge = !HasBeatenChallenge(mGameMode);
-		mPlayerInfo->mChallengeRecords[GetCurrentChallengeIndex()]++;
+		mPlayerInfo->ChallengeRecordRef(GetCurrentChallengeIndex())++;
 
 		if (aUnlockedNewChallenge && HasFinishedAdventure())
 		{
@@ -3290,7 +3290,16 @@ bool LawnApp::IsAdventureMode()
 //0x4536D0
 bool LawnApp::IsSurvivalMode()
 {
-	return mGameMode >= GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1 && mGameMode <= GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_5 || mGameMode >= GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_6 && mGameMode <= GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_HIGHGROUND;
+	if (mGameMode >= GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1 && mGameMode <= GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_5 || mGameMode >= GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_6 && mGameMode <= GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_HIGHGROUND)
+		return true;
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 合作模式的九个生存型关卡整套复用生存模式的流程（分段、旗帜、结算、掉落）
+	if (IsCoopSurvivalLevel(mGameMode))
+		return true;
+#endif
+
+	return false;
 }
 
 //0x4536F0
@@ -3311,6 +3320,10 @@ bool LawnApp::IsSurvivalNormal(GameMode theGameMode)
 {
 	int aLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_1;
 	int aLimboLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_NORMAL_STAGE_6;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (theGameMode >= GameMode::GAMEMODE_COOP_DAY && theGameMode <= GameMode::GAMEMODE_COOP_ROOF)
+		return true;
+#endif
 	return aLevel >= 0 && aLevel <= 4 || aLimboLevel >= 0 && aLimboLevel <= 1;
 }
 
@@ -3318,6 +3331,11 @@ bool LawnApp::IsSurvivalHard(GameMode theGameMode)
 {
 	int aLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_HARD_STAGE_1;
 	int aLimboLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_HARD_STAGE_6;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 困难合作关与生存困难关完全相同
+	if (theGameMode >= GameMode::GAMEMODE_COOP_HARD_DAY && theGameMode <= GameMode::GAMEMODE_COOP_HARD_ROOF)
+		return true;
+#endif
 	return aLevel >= 0 && aLevel <= 4 || aLimboLevel >= 0 && aLimboLevel <= 1;
 }
 
@@ -3325,6 +3343,10 @@ bool LawnApp::IsSurvivalEndless(GameMode theGameMode)
 {
 	int aLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_1;
 	int aLimboLevel = theGameMode - GameMode::GAMEMODE_SURVIVAL_ENDLESS_STAGE_6;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (theGameMode == GameMode::GAMEMODE_COOP_ENDLESS)
+		return true;
+#endif
 	return aLevel >= 0 && aLevel <= 4 || aLimboLevel >= 0 && aLimboLevel <= 1;
 }
 
@@ -3397,6 +3419,44 @@ bool LawnApp::IsVersusMode()
 {
 	return mBoard && mGameMode == GameMode::GAMEMODE_VERSUS;
 }
+
+//	十一个专属合作关卡
+bool LawnApp::IsCoopLevel(GameMode theGameMode)
+{
+	return theGameMode >= GameMode::GAMEMODE_COOP_DAY && theGameMode <= GameMode::GAMEMODE_COOP_ENDLESS;
+}
+
+//	其中的九个走生存模式的流程；保龄球与僵王博士则走各自原本的关卡流程
+bool LawnApp::IsCoopSurvivalLevel(GameMode theGameMode)
+{
+	return IsCoopLevel(theGameMode) &&
+		theGameMode != GameMode::GAMEMODE_COOP_BOWLING &&
+		theGameMode != GameMode::GAMEMODE_COOP_ZOMBOSS;
+}
+
+//	普通合作关只打两到三面旗，困难合作关与生存困难关一样是十面旗
+int LawnApp::GetCoopSurvivalFlags(GameMode theGameMode)
+{
+	switch (theGameMode)
+	{
+	case GameMode::GAMEMODE_COOP_DAY:
+	case GameMode::GAMEMODE_COOP_NIGHT:
+		return COOP_FLAGS_SHORT;
+
+	case GameMode::GAMEMODE_COOP_POOL:
+	case GameMode::GAMEMODE_COOP_ROOF:
+		return COOP_FLAGS_LONG;
+
+	default:
+		return SURVIVAL_HARD_FLAGS;
+	}
+}
+
+//	专属合作关卡里双人始终生效，其它关卡由“更多设置”里的开关决定
+bool LawnApp::IsCoopActive()
+{
+	return mLocalCoopEnabled || IsCoopLevel(mGameMode);
+}
 #endif
 
 //0x453820
@@ -3413,6 +3473,11 @@ bool LawnApp::IsWallnutBowlingLevel()
 
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING || mGameMode == GameMode::GAMEMODE_CHALLENGE_WALLNUT_BOWLING_2)
 		return true;
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mGameMode == GameMode::GAMEMODE_COOP_BOWLING)
+		return true;
+#endif
 
 	return IsAdventureMode() && mPlayerInfo->mLevel == 5;
 }
@@ -3506,6 +3571,11 @@ bool LawnApp::IsFinalBossLevel()
 
 	if (mGameMode == GameMode::GAMEMODE_CHALLENGE_FINAL_BOSS)
 		return true;
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mGameMode == GameMode::GAMEMODE_COOP_ZOMBOSS)
+		return true;
+#endif
 
 	return IsAdventureMode() && mPlayerInfo->mLevel == 50;
 }
@@ -3828,11 +3898,16 @@ bool LawnApp::HasBeatenChallenge(GameMode theGameMode)
 	TOD_ASSERT(aChallengeIndex >= 0 && aChallengeIndex < NUM_CHALLENGE_MODES);
 	if (IsSurvivalNormal(theGameMode))
 	{
-		return mPlayerInfo->mChallengeRecords[aChallengeIndex] >= SURVIVAL_NORMAL_FLAGS;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		// 普通合作关只有两到三面旗
+		if (IsCoopLevel(theGameMode))
+			return mPlayerInfo->ChallengeRecordRef(aChallengeIndex) >= GetCoopSurvivalFlags(theGameMode);
+#endif
+		return mPlayerInfo->ChallengeRecordRef(aChallengeIndex) >= SURVIVAL_NORMAL_FLAGS;
 	}
 	if (IsSurvivalHard(theGameMode))
 	{
-		return mPlayerInfo->mChallengeRecords[aChallengeIndex] >= SURVIVAL_HARD_FLAGS;
+		return mPlayerInfo->ChallengeRecordRef(aChallengeIndex) >= SURVIVAL_HARD_FLAGS;
 	}
 	if (IsSurvivalEndless(theGameMode) || IsEndlessScaryPotter(theGameMode) || IsEndlessIZombie(theGameMode) || IsLastStandEndless(theGameMode))
 	{
@@ -3842,7 +3917,7 @@ bool LawnApp::HasBeatenChallenge(GameMode theGameMode)
 	if (mGameMode == GameMode::GAMEMODE_UPSELL && theGameMode > GameMode::GAMEMODE_CHALLENGE_SLOT_MACHINE) {
 		return false;
 	}
-	return mPlayerInfo->mChallengeRecords[aChallengeIndex] > 0;
+	return mPlayerInfo->ChallengeRecordRef(aChallengeIndex) > 0;
 }
 
 //0x454170

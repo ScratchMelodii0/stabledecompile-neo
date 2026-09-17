@@ -2,6 +2,9 @@
 #define __PLAYERINFO_H__
 
 #define MAX_POTTED_PLANTS 200
+// mChallengeRecords 的长度是存档格式的一部分，不能改动；新增的关卡另用一张表，
+// 并在 SyncDetails 的末尾追加同步，这样旧存档读到文件尾即停止，不会被误读。
+#define MAX_CHALLENGE_RECORDS 100
 #define PURCHASE_COUNT_OFFSET 1000
 
 #include <ctime>
@@ -52,7 +55,7 @@ public:
     int                 mLevel;                             //+0x24
     int                 mCoins;                             //+0x28
     int                 mFinishedAdventure;                 //+0x2C
-    int                 mChallengeRecords[100];             //+0x30
+    int                 mChallengeRecords[MAX_CHALLENGE_RECORDS];  //+0x30
     long                mPurchases[80];                     //+0x1C0
     int                 mPlayTimeActivePlayer;              //+0x300
     int                 mPlayTimeInactivePlayer;            //+0x304
@@ -84,6 +87,11 @@ public:
 #endif
     bool                mDidRIPMode;
     int                 mRIPLevel;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 十一个专属合作关卡的成绩。它们的挑战序号已经超出了 mChallengeRecords 的容量，
+    // 所以单独存放，并通过 ChallengeRecordRef 统一取用。
+    int                 mCoopRecords[NUM_COOP_CHALLENGE_RECORDS];
+#endif
 
 public:
     PlayerInfo();
@@ -98,6 +106,8 @@ public:
     inline int          GetLevel() const { return mLevel; }
     inline void         SetLevel(int theLevel) { mLevel = theLevel; }
     /*inline*/ void     ResetChallengeRecord(GameMode theGameMode);
+    // 按挑战序号（游戏模式减去 GAMEMODE_SURVIVAL_NORMAL_STAGE_1）取用成绩记录
+    int&                ChallengeRecordRef(int theChallengeIndex);
 };
 
 #endif

@@ -119,6 +119,18 @@ ChallengeDefinition gChallengeDefs[NUM_CHALLENGE_MODES] = {
 #endif
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	{ GameMode::GAMEMODE_VERSUS,							   10,  ChallengePage::CHALLENGE_PAGE_LIMBO_CHALLENGE,       5,  1,  _S("[VERSUS]") },
+	// 主机版的十一个合作关卡，顺序与 GameMode 枚举逐项对齐（GetChallengeDefinition 会断言这一点）
+	{ GameMode::GAMEMODE_COOP_DAY,                            0,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  0,  _S("[COOP_DAY]") },
+	{ GameMode::GAMEMODE_COOP_NIGHT,                          1,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  1,  _S("[COOP_NIGHT]") },
+	{ GameMode::GAMEMODE_COOP_POOL,                           2,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  2,  _S("[COOP_POOL]") },
+	{ GameMode::GAMEMODE_COOP_ROOF,                           4,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  3,  _S("[COOP_ROOF]") },
+	{ GameMode::GAMEMODE_COOP_BOWLING,                        0,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  4,  _S("[COOP_BOWLING]") },
+	{ GameMode::GAMEMODE_COOP_HARD_DAY,                       5,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  0,  _S("[COOP_HARD_DAY]") },
+	{ GameMode::GAMEMODE_COOP_HARD_NIGHT,                     6,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  1,  _S("[COOP_HARD_NIGHT]") },
+	{ GameMode::GAMEMODE_COOP_HARD_POOL,                      7,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  2,  _S("[COOP_HARD_POOL]") },
+	{ GameMode::GAMEMODE_COOP_HARD_ROOF,                      9,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  3,  _S("[COOP_HARD_ROOF]") },
+	{ GameMode::GAMEMODE_COOP_ZOMBOSS,                        4,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  4,  _S("[COOP_ZOMBOSS]") },
+	{ GameMode::GAMEMODE_COOP_ENDLESS,                       12,  ChallengePage::CHALLENGE_PAGE_COOP,		 2,  0,  _S("[COOP_ENDLESS]") },
 #endif
 };
 
@@ -159,6 +171,10 @@ ChallengeScreen::ChallengeScreen(LawnApp* theApp, ChallengePage thePage)
 			aPageButton->mLabel = TodStringTranslate(_S("[LIMBO_PAGE]"));
 		else if (aPageIdx == CHALLENGE_PAGE_LAST_STAND)
 			aPageButton->mLabel = TodStringTranslate(_S("[LAST_STAND_PAGE]"));
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		else if (aPageIdx == CHALLENGE_PAGE_COOP)
+			aPageButton->mLabel = TodStringTranslate(_S("[COOP_PAGE]"));
+#endif
 		else
 			aPageButton->mLabel = TodReplaceNumberString(_S("[PAGE_X]"), _S("{PAGE}"), aPageIdx);
 		aPageButton->mButtonImage = Sexy::IMAGE_BLANK;
@@ -190,6 +206,16 @@ ChallengeScreen::ChallengeScreen(LawnApp* theApp, ChallengePage thePage)
 #ifdef _HAS_EXTENDED_MINIGAMES
 		if (thePage == ChallengePage::CHALLENGE_PAGE_PUZZLE && (aPageIdx == ChallengePage::CHALLENGE_PAGE_LAST_STAND || aPageIdx == ChallengePage::CHALLENGE_PAGE_PUZZLE))
 			aPageButton->mVisible = true;
+#endif
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		// 合作页与生存页互为邻页，两边都摆上按钮，否则合作关卡没有入口
+		if ((thePage == ChallengePage::CHALLENGE_PAGE_SURVIVAL || thePage == ChallengePage::CHALLENGE_PAGE_COOP) &&
+			(aPageIdx == ChallengePage::CHALLENGE_PAGE_SURVIVAL || aPageIdx == ChallengePage::CHALLENGE_PAGE_COOP))
+		{
+			aPageButton->mVisible = true;
+			aPageButton->Resize(200 + 100 * (aPageIdx == ChallengePage::CHALLENGE_PAGE_SURVIVAL ? 0 : 1), 540, 100, 75);
+		}
 #endif
 
 	}
@@ -414,6 +440,14 @@ int ChallengeScreen::MoreTrophiesNeeded(int theChallengeIndex)
 			{
 				return 0;
 			}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+			// 合作关卡按页内顺序逐关解锁，与生存页的规则一致
+			if (aDef.mPage == ChallengePage::CHALLENGE_PAGE_COOP)
+			{
+				aNumTrophies += 3;
+				return aIdxInPage >= aNumTrophies ? aIdxInPage - aNumTrophies + 1 : 0;
+			}
+#endif
 			if (mApp->IsSurvivalEndless(aDef.mChallengeMode))
 			{
 				return 10 - aNumTrophies;
@@ -505,7 +539,12 @@ int ChallengeScreen::AccomplishmentsNeeded(int theChallengeIndex)
 {
 	int aTrophiesNeeded = MoreTrophiesNeeded(theChallengeIndex);
 	GameMode aGameMode = GetChallengeDefinition(theChallengeIndex).mChallengeMode;
-	if (mApp->IsSurvivalEndless(aGameMode) && aTrophiesNeeded <= 3 && mApp->GetNumTrophies(CHALLENGE_PAGE_SURVIVAL) < 10 &&
+	if (mApp->IsSurvivalEndless(aGameMode) &&
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		// 合作模式的无尽关已经在 MoreTrophiesNeeded 里按合作页自己的进度算过了
+		!LawnApp::IsCoopLevel(aGameMode) &&
+#endif
+		aTrophiesNeeded <= 3 && mApp->GetNumTrophies(CHALLENGE_PAGE_SURVIVAL) < 10 &&
 		mApp->GetNumTrophies(CHALLENGE_PAGE_LAST_STAND) < 5 &&
 		mApp->HasFinishedAdventure() && !mApp->IsTrialStageLocked()) aTrophiesNeeded = 1;
 	return mCheatEnableChallenges ? 0 : aTrophiesNeeded;
@@ -580,7 +619,12 @@ void ChallengeScreen::DrawButton(Graphics* g, int theChallengeIndex)
 				}
 				g->SetColorizeImages(true);
 			}
-			if (mPageIndex == CHALLENGE_PAGE_SURVIVAL || mPageIndex == CHALLENGE_PAGE_LIMBO_SURVIVAL)
+			if (mPageIndex == CHALLENGE_PAGE_SURVIVAL || mPageIndex == CHALLENGE_PAGE_LIMBO_SURVIVAL
+#ifdef _HAS_LOCAL_MULTIPLAYER
+				// 合作关卡与生存关卡同形，缩略图也用生存模式的那一张图集
+				|| mPageIndex == CHALLENGE_PAGE_COOP
+#endif
+				)
 			{
 				g->DrawImageCel(Sexy::IMAGE_SURVIVAL_THUMBNAILS, aPosX + 13, aPosY + 4, aDef.mChallengeIconIndex);
 			}
@@ -704,7 +748,7 @@ void ChallengeScreen::DrawButton(Graphics* g, int theChallengeIndex)
 			// ============================================================================================
 			// ▲ 绘制关卡锁定或关卡完成的贴图以及关卡最高记录的文本等
 			// ============================================================================================
-			int aRecord = mApp->mPlayerInfo->mChallengeRecords[theChallengeIndex];
+			int aRecord = mApp->mPlayerInfo->ChallengeRecordRef(theChallengeIndex);
 			if (theChallengeIndex == mUnlockChallengeIndex && mApp->mPlayerInfo && !mApp->mPlayerInfo->mHasUsedCheatKeys)
 			{
 				Image* aLockImage = Sexy::IMAGE_LOCK;
@@ -899,7 +943,7 @@ void ChallengeScreen::ButtonDepress(int theId)
 	}
 
 	int aChallengeMode = theId - ChallengeScreen::ChallengeScreen_Mode;
-	if (aChallengeMode >= 0 && aChallengeMode < NUM_CHALLENGE_MODES)
+	if (aChallengeMode >= 0 && aChallengeMode < NUM_CHALLENGE_MODES && theId < ChallengeScreen::ChallengeScreen_Page)
 	{
 		mApp->KillChallengeScreen();
 		mApp->PreNewGame((GameMode)(aChallengeMode + 1), true);

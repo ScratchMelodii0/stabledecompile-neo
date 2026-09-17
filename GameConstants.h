@@ -51,6 +51,17 @@ const int           VERSUS_BRAIN_COUNTDOWN_MAX = 950;
 const int           VERSUS_GRAVE_BRAIN_RATE = 2500;		// 与向日葵的 mLaunchRate 相同
 const int           VERSUS_GRAVE_BRAIN_FIRST = 900;		// 新墓碑产出第一颗脑子所需的时间
 
+// 合作模式：主机版一共八个卡槽，两名玩家各四个，各自进一次选卡界面
+const int           COOP_SEEDS_PER_PLAYER = 4;
+// 合作模式的普通关只打两到三面旗（困难关与生存困难关完全相同，为十面旗）
+const int           COOP_FLAGS_SHORT = 2;
+const int           COOP_FLAGS_LONG = 3;
+// 合作模式偶尔掉落的双人阳光：两名玩家的光标必须同时压在它上面才会被收走
+const int           COOP_DOUBLE_SUN_CHANCE = 6;			// 每 N 颗天降阳光中约有一颗是双人阳光
+const int           COOP_DOUBLE_SUN_VALUE = 50;			// 每名玩家各得这么多阳光
+const int           COOP_DOUBLE_SUN_SCALE = 15;			// 贴图放大的百分比，用来与普通阳光区分
+const int           COOP_DOUBLE_SUN_GRACE = 15;			// 两人各自压住它的时间差上限（帧）
+
 const int			WIDESCREEN_OFFSETX = -240;
 const int			WIDESCREEN_OFFSETY = -60;
 

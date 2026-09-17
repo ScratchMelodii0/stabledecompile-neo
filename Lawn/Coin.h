@@ -40,6 +40,11 @@ public:
     int                     mTimesDropped;          //+0xCC
     FilterEffect            mFilterEffect;
     ReanimationID           mReanimationID;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 双人阳光：每名玩家的光标压在它上面时把自己的计时器顶满，两个计时器同时大于零就收走。
+    // 这给了两人一点点时间差的余地，不必严格到同一帧。
+    int                     mCoopHoldCounter[MAX_LAWN_PLAYERS];
+#endif
 
 public:
     Coin();
@@ -64,6 +69,8 @@ public:
     /*inline*/ bool         IsSun();
 #ifdef _HAS_LOCAL_MULTIPLAYER
     /*inline*/ bool         IsBrain();
+    /*inline*/ bool         IsCoopDoubleSun();
+    void                    UpdateCoopDoubleSun();
 #endif
     float                   GetSunScale();
     inline bool             IsOnGround() { return false; }

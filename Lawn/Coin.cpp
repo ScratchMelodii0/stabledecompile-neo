@@ -52,6 +52,10 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
 	mPottedPlantSpec.InitializePottedPlant(SeedType::SEED_NONE);
     mFilterEffect = FilterEffect::FILTER_EFFECT_NONE;
     mReanimationID = ReanimationID::REANIMATIONID_NULL;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    mCoopHoldCounter[0] = 0;
+    mCoopHoldCounter[1] = 0;
+#endif
 
     if (IsSun())
     {
@@ -456,8 +460,20 @@ bool Coin::IsBrain()
 //0x430990
 bool Coin::IsSun()
 {
-    return mType == CoinType::COIN_SUN || mType == CoinType::COIN_SMALLSUN || mType == CoinType::COIN_LARGESUN;
+    return mType == CoinType::COIN_SUN || mType == CoinType::COIN_SMALLSUN || mType == CoinType::COIN_LARGESUN
+#ifdef _HAS_LOCAL_MULTIPLAYER
+        // 双人阳光在其它一切方面都是一颗普通阳光：同一个动画、同一套下落与收取流程
+        || mType == CoinType::COIN_SUN_COOP
+#endif
+        ;
 }
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+bool Coin::IsCoopDoubleSun()
+{
+    return mType == CoinType::COIN_SUN_COOP;
+}
+#endif
 
 //0x4309B0
 bool Coin::IsPresentWithAdvice()
@@ -474,6 +490,15 @@ void Coin::ScoreCoin()
     {
         int aSunValue = GetSunValue();
         mBoard->AddSunMoney(aSunValue);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+        // 双人阳光两名玩家各得一整份，而不是把一份分成两半
+        if (IsCoopDoubleSun() && mBoard->IsLocalMultiplayer())
+        {
+            mBoard->SwapPlayerContext();
+            mBoard->AddSunMoney(aSunValue);
+            mBoard->SwapPlayerContext();
+        }
+#endif
 
         if (!mApp->GetDialog(DIALOG_ALMANAC) && mApp->ChallengeHasScores(mApp->mGameMode) && mApp->IsIZombieLevel()) {
             mBoard->mChallenge->mChallengePoints += aSunValue;
@@ -811,6 +836,10 @@ void Coin::Update()
         UpdateCollected();
     }
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    UpdateCoopDoubleSun();
+#endif
+
     if (mAttachmentID != AttachmentID::ATTACHMENTID_NULL)
     {
         float aOffsetX = 0.0f;
@@ -831,6 +860,50 @@ void Coin::Update()
         //}
     }
 }
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+// ====================================================================================================
+// ▲ 合作模式的双人阳光
+// ----------------------------------------------------------------------------------------------------
+// 主机版的合作模式里偶尔会掉下一颗需要两人合力才收得走的阳光。这里的判定是“同时压住”：
+// 每一帧检查两名玩家的光标是否落在这颗阳光上，是的话就把这名玩家的计时器顶满；
+// 两个计时器同时大于零就说明两人在 COOP_DOUBLE_SUN_GRACE 帧之内都碰到了它，于是收走。
+// 之所以用压住而不是点击，是因为玩家二的“点击”本来就是由 Board 翻译出来的，
+// 要两边的点击落在同一帧上太苛刻；压住既好操作，也仍然要求两人真的一起动手。
+// ====================================================================================================
+void Coin::UpdateCoopDoubleSun()
+{
+    if (!IsCoopDoubleSun() || mBoard == nullptr || mDead || mIsBeingCollected)
+        return;
+
+    if (!mBoard->IsLocalMultiplayer())
+    {
+        // 双人中途掉线（例如玩家二拔掉了手柄又关掉了合作）时不能把这颗阳光变成死物
+        Collect();
+        return;
+    }
+
+    for (int aPlayerIndex = 0; aPlayerIndex < MAX_LAWN_PLAYERS; aPlayerIndex++)
+    {
+        if (mCoopHoldCounter[aPlayerIndex] > 0)
+        {
+            mCoopHoldCounter[aPlayerIndex]--;
+        }
+
+        int aPosX = mBoard->GetPlayerPointerX(aPlayerIndex);
+        int aPosY = mBoard->GetPlayerPointerY(aPlayerIndex);
+        if (aPosX >= mPosX && aPosX < mPosX + mWidth && aPosY >= mPosY && aPosY < mPosY + mHeight)
+        {
+            mCoopHoldCounter[aPlayerIndex] = COOP_DOUBLE_SUN_GRACE;
+        }
+    }
+
+    if (mCoopHoldCounter[0] > 0 && mCoopHoldCounter[1] > 0)
+    {
+        Collect();
+    }
+}
+#endif
 
 //0x4316F0
 Color Coin::GetColor()
@@ -1382,12 +1455,21 @@ void Coin::Collect()
 
 float Coin::GetSunScale()
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 双人阳光画得比普通阳光大一圈，好让两名玩家一眼认出来
+    if (mType == CoinType::COIN_SUN_COOP)
+        return 1.0f + COOP_DOUBLE_SUN_SCALE / 100.0f;
+#endif
     return mType == CoinType::COIN_SMALLSUN ? 0.5f : mType == CoinType::COIN_LARGESUN ? 2.0f : 1.0f;
 }
 
 //0x4329A0
 int Coin::GetSunValue()
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    if (mType == CoinType::COIN_SUN_COOP)
+        return COOP_DOUBLE_SUN_VALUE;
+#endif
     return mType == CoinType::COIN_SUN ? 25 : mType == CoinType::COIN_SMALLSUN ? 15 : mType == CoinType::COIN_LARGESUN ? 50 : 0;
 }
 
@@ -1533,6 +1615,12 @@ bool Coin::MouseHitTest(int theX, int theY, HitResult* theHitResult)
 #ifdef _HAS_LOCAL_MULTIPLAYER
     // 对战模式中两边的钱是分开的：阳光只有植物一方（玩家一）能捡，脑子只有僵尸一方（玩家二）能捡。
     // mActivePlayerIndex 指出当前正在处理的是哪一名玩家的点击（见 Board::SwapPlayerContext）。
+    // 双人阳光不靠点击收取，而是两名玩家的光标同时压住它（见 UpdateCoopDoubleSun），
+    // 所以这里一律不让它被点中，免得任何一方单独把它拿走。
+    if (IsCoopDoubleSun())
+    {
+        aCanHitCoin = false;
+    }
     if (mBoard && mApp->IsVersusMode())
     {
         if (IsBrain() && mBoard->mActivePlayerIndex != 1)

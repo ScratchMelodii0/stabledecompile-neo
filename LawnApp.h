@@ -331,6 +331,13 @@ public:
 	/*inline*/ bool					IsIZombieLevel();
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	/*inline*/ bool					IsVersusMode();
+	// 十一个专属合作关卡。IsCoopSurvivalLevel 挑出其中九个“生存型”的关卡，
+	// 它们直接复用生存模式的整套流程（见 IsSurvivalNormal / IsSurvivalHard / IsSurvivalEndless）。
+	static /*inline*/ bool			IsCoopLevel(GameMode theGameMode);
+	static /*inline*/ bool			IsCoopSurvivalLevel(GameMode theGameMode);
+	static /*inline*/ int			GetCoopSurvivalFlags(GameMode theGameMode);
+	// 双人是否生效：专属合作关卡强制生效，其余关卡看“更多设置”里的开关
+	/*inline*/ bool					IsCoopActive();
 #endif
 	/*inline*/ bool					CanShowZenGarden();
 	static SexyString				GetMoneyString(int theAmount);
