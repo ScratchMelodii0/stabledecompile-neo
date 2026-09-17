@@ -16,6 +16,15 @@ Zombies rise on graves - put down a Gravestone first!
 [ADVICE_VERSUS_ZOMBIE_SIDE_ONLY]
 Zombies can only go on the zombie side of the lawn!
 
+[VERSUS_PLANT_WIN_MESSAGE]
+The Plants win! All the Target Zombies have been destroyed.
+
+[VERSUS_ZOMBIE_WIN_HEADER]
+Zombies Win!
+
+[VERSUS_ZOMBIE_WIN_MESSAGE]
+The Zombies win! A brain made it into the house.
+
 [COOP_PAGE]
 Co-op
 

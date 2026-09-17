@@ -57,6 +57,8 @@ public:
 
 	static bool			IsVersusZombieSeed(SeedType theSeedType);
 	static int			GetZombieSeedCost(SeedType theSeedType);
+	static int			GetZombieSeedRefreshTime(SeedType theSeedType);
+	static bool			IsZombieCardUnlocked(SeedType theSeedType, LawnApp* theApp);
 	static ZombieType	SeedTypeToZombieType(SeedType theSeedType);
 	/*inline*/ bool		IsZombieSideColumn(int theGridX);
 	bool				IsUsableSquare(int theGridX, int theGridY);

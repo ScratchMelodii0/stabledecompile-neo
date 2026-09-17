@@ -79,7 +79,7 @@ public:
 	DialogButton*			mMenuButton;
 
 public:
-	GameOverDialog(const SexyString& theMessage, bool theShowChallengeName);
+	GameOverDialog(const SexyString& theMessage, bool theShowChallengeName, const SexyString& theHeaderOverride = _S(""));
 	virtual ~GameOverDialog();
 
 	virtual void			ButtonDepress(int theId);

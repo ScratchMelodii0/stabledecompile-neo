@@ -456,18 +456,23 @@ void ReanimationWidget::Update()
 }
 
 //0x457BC0
-GameOverDialog::GameOverDialog(const SexyString& theMessage, bool theShowChallengeName) : LawnDialog(
-    gLawnApp, 
-    Dialogs::DIALOG_GAME_OVER, 
-    true, 
-    _S("[GAME_OVER]"), 
+GameOverDialog::GameOverDialog(const SexyString& theMessage, bool theShowChallengeName, const SexyString& theHeaderOverride) : LawnDialog(
+    gLawnApp,
+    Dialogs::DIALOG_GAME_OVER,
+    true,
+    _S("[GAME_OVER]"),
     theMessage,
-    _S(""), 
+    _S(""),
     Dialog::BUTTONS_FOOTER)
 {
     mMenuButton = nullptr;
     mLawnYesButton->SetLabel(_S("[TRY_AGAIN]"));
-    if (theShowChallengeName)
+    if (theHeaderOverride.size() > 0)
+    {
+        // 用于对战模式等需要一个专属标题（而非“游戏结束”/关卡名）的结局提示，例如“僵尸方胜利！”
+        mDialogHeader = TodStringTranslate(theHeaderOverride);
+    }
+    else if (theShowChallengeName)
     {
         mDialogHeader = TodStringTranslate(mApp->GetCurrentChallengeDef().mChallengeName);
     }
