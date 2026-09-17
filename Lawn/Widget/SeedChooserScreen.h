@@ -85,6 +85,11 @@ public:
     bool					mSwipeJustReleased;
     bool                    mAllowBetaSeedpackets;
     ScrollbarWidget*        mScrollbar;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 合作模式的分开选卡：先由玩家一选四张，再由玩家二选四张，共用同一个选卡界面。
+    // 0 表示正在为玩家一选卡（单人时恒为 0），1 表示正在为玩家二选卡。
+    int                     mChoosingPlayerIndex;
+#endif
 
 public:
     SeedChooserScreen();
@@ -125,6 +130,13 @@ public:
     virtual void            MouseDown(int x, int y, int theClickCount);
     /*inline*/ bool         PickedPlantType(SeedType theSeedType);
     void                    CloseSeedChooser();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    bool                    IsSplitChooser();
+    void                    CommitSeedsToBank();
+    void                    BeginPlayerTwoPicking();
+    void                    UpdatePlayerTwoInput();
+    void                    DrawPlayerTwoCursor(Graphics* g);
+#endif
     virtual void            KeyDown(KeyCode theKey);
     virtual void            KeyChar(SexyChar theChar);
     void                    UpdateAfterPurchase();

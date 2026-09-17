@@ -33,6 +33,9 @@ SeedChooserScreen::SeedChooserScreen()
 	mLastMouseY = -1;
 	mChooseState = CHOOSE_NORMAL;
 	mViewLawnTime = 0;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	mChoosingPlayerIndex = 0;
+#endif
 	mToolTip = new ToolTipWidget();
 	mToolTipSeed = -1;
 	mIsSwiping = false;
@@ -365,6 +368,14 @@ void SeedChooserScreen::GetSeedPositionInBank(int theIndex, int& x, int& y)
 //0x4844D0
 SeedChooserScreen::~SeedChooserScreen()
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 玩家二选到一半就退出（例如回主菜单）时，别把 Board 留在“玩家二”那一侧
+	if (mChoosingPlayerIndex == 1 && mBoard)
+	{
+		mBoard->SwapPlayerContext();
+		mChoosingPlayerIndex = 0;
+	}
+#endif
 	if (mStartButton) delete mStartButton;
 	if (mRandomButton) delete mRandomButton;
 	if (mViewLawnButton) delete mViewLawnButton;
@@ -414,6 +425,13 @@ void SeedChooserScreen::Draw(Graphics* g)
 		g->DrawImage(Sexy::IMAGE_SEEDCHOOSER_IMITATERADDON, 459, 503);
 	}
 	TodDrawString(g, _S("[CHOOSE_YOUR_PLANTS]"), 229, 110, Sexy::FONT_DWARVENTODCRAFT18YELLOW, Color::White, DS_ALIGN_CENTER);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (IsSplitChooser())
+	{
+		TodDrawString(g, mChoosingPlayerIndex == 0 ? _S("[COOP_PLAYER_1_CHOOSE]") : _S("[COOP_PLAYER_2_CHOOSE]"),
+			229, 128, Sexy::FONT_BRIANNETOD12, Color::White, DS_ALIGN_CENTER);
+	}
+#endif
 
 	int aNumSeeds = Has7Rows() ? 49 : 41;
 	if (mAllowBetaSeedpackets) 
@@ -561,6 +579,9 @@ void SeedChooserScreen::Draw(Graphics* g)
 	aBoardFrameG.mTransY -= mY;
 	mMenuButton->Draw(&aBoardFrameG);
 	mToolTip->Draw(g);
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	DrawPlayerTwoCursor(g);
+#endif
 }
 
 //0x484C30
@@ -706,6 +727,9 @@ void SeedChooserScreen::Update()
 	mScrollbar->Update();
 	UpdateViewLawn();
 	UpdateCursor();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	UpdatePlayerTwoInput();
+#endif
 	MarkDirty();
 }
 
@@ -862,6 +886,16 @@ void SeedChooserScreen::OnStartButton()
 		!CheckSeedUpgrade(SEED_GLOOMSHROOM, SEED_FUMESHROOM) || 
 		!CheckSeedUpgrade(SEED_CATTAIL, SEED_LILYPAD))
 		return;
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 合作模式里这一下“Let's Rock”只结束当前这名玩家的选卡
+	if (IsSplitChooser() && mChoosingPlayerIndex == 0)
+	{
+		CommitSeedsToBank();
+		BeginPlayerTwoPicking();
+		return;
+	}
+#endif
 
 	CloseSeedChooser();
 }
@@ -1320,7 +1354,8 @@ bool SeedChooserScreen::PickedPlantType(SeedType theSeedType)
 }
 
 //0x486D20
-void SeedChooserScreen::CloseSeedChooser()
+//	把选好的卡牌写进当前这一份卡槽（合作模式下“当前”由 Board::SwapPlayerContext 决定是谁的）
+void SeedChooserScreen::CommitSeedsToBank()
 {
 	DBG_ASSERT(mBoard->mSeedBank->mNumPackets == mBoard->GetNumSeedsInBank());
 	for (int anIndex = 0; anIndex < mBoard->mSeedBank->mNumPackets; anIndex++)
@@ -1337,6 +1372,21 @@ void SeedChooserScreen::CloseSeedChooser()
 			aSeedPacket.mActive = false;
 		}
 	}
+}
+
+//0x486D20
+void SeedChooserScreen::CloseSeedChooser()
+{
+	CommitSeedsToBank();
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 玩家二这一轮结束了，把 Board 的成员换回玩家一
+	if (mChoosingPlayerIndex == 1)
+	{
+		mBoard->SwapPlayerContext();
+		mChoosingPlayerIndex = 0;
+	}
+#endif
 
 	mStartButton->SetDisabled(true);
 	mImitaterButton->SetDisabled(true);
@@ -1346,6 +1396,114 @@ void SeedChooserScreen::CloseSeedChooser()
 	mRandomButton->SetDisabled(true);
 	mBoard->mCutScene->EndSeedChooser();
 }
+
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+// ====================================================================================================
+// ▲ 合作模式的分开选卡（两人各四张）
+// ----------------------------------------------------------------------------------------------------
+// 主机版的合作模式一共八个卡槽，两名玩家各四个，各自挑自己的四张。这里不去再造一个选卡界面，
+// 而是让同一个界面跑两遍：玩家一按下“Let's Rock”时先把他的四张写进卡槽，随后把界面整个
+// 重置，并借 Board::SwapPlayerContext 把玩家二的卡槽换进 Board——于是界面后半程读写的
+// mBoard->mSeedBank 就是玩家二那一份，卡牌也会飞向屏幕底部玩家二自己的卡槽。
+// 玩家二用虚拟光标操作（手柄或方向键，与关卡中完全一致），确认键是它的次键；
+// 玩家一的鼠标在这一轮里仍然可用，一个人也能把两份卡都选完。
+// ====================================================================================================
+bool SeedChooserScreen::IsSplitChooser()
+{
+	return mBoard && mBoard->HasSplitSeedChooser();
+}
+
+void SeedChooserScreen::BeginPlayerTwoPicking()
+{
+	// 玩家二的光标与卡槽是在这里才建立起来的（关卡开始时的那次调用会看到 mActive 已经为真而跳过）
+	mBoard->InitLocalMultiplayer();
+	if (mBoard->mPlayer2.mSeedBank == nullptr)
+		return;
+
+	mChoosingPlayerIndex = 1;
+	mBoard->SwapPlayerContext();
+	mBoard->mSeedBank->UpdateWidth();
+
+	// 把所有卡牌收回选卡区，重新来一遍
+	mSeedsInBank = 0;
+	mSeedsInFlight = 0;
+	for (SeedType aSeedType = SEED_PEASHOOTER; aSeedType < NUM_SEEDS_IN_CHOOSER; aSeedType = (SeedType)(aSeedType + 1))
+	{
+		ChosenSeed& aChosenSeed = mChosenSeeds[aSeedType];
+		GetSeedPositionInChooser(aSeedType, aChosenSeed.mX, aChosenSeed.mY);
+		aChosenSeed.mTimeStartMotion = 0;
+		aChosenSeed.mTimeEndMotion = 0;
+		aChosenSeed.mStartX = aChosenSeed.mX;
+		aChosenSeed.mStartY = aChosenSeed.mY;
+		aChosenSeed.mEndX = aChosenSeed.mX;
+		aChosenSeed.mEndY = aChosenSeed.mY;
+		aChosenSeed.mSeedState = aSeedType == SEED_IMITATER ? SEED_PACKET_HIDDEN : SEED_IN_CHOOSER;
+		aChosenSeed.mSeedIndexInBank = 0;
+		aChosenSeed.mRefreshCounter = 0;
+		aChosenSeed.mRefreshing = false;
+		aChosenSeed.mImitaterType = SEED_NONE;
+		aChosenSeed.mCrazyDavePicked = false;
+	}
+
+	RemoveToolTip();
+	EnableStartButton(false);
+	UpdateImitaterButton();
+	mApp->PlayFoley(FoleyType::FOLEY_DROP);
+}
+
+//	把玩家二的输入翻译成这个控件上的鼠标事件，与 Board::UpdateLocalPlayers 的做法一致
+void SeedChooserScreen::UpdatePlayerTwoInput()
+{
+	if (mChoosingPlayerIndex != 1 || !mBoard->IsLocalMultiplayer() || mApp->GetDialogCount() > 0)
+		return;
+
+	mBoard->mPlayer2.UpdateInput(mApp->mWidth, mApp->mHeight);
+
+	const PlayerInputState& aInput = mBoard->mPlayer2.mInput;
+	// 控件坐标：控件被摆在 (mX, mY)，而输入快照与鼠标一样是屏幕坐标
+	const int aPosX = aInput.mPointerX - mX;
+	const int aPosY = aInput.mPointerY - mY;
+
+	// SeedHitTest 只在 mMouseVisible 为真时才认账，而那面旗子说的是真实鼠标在不在控件上。
+	// 玩家二的光标与真实鼠标无关，所以在派发它的事件期间把旗子顶上去，事后还原。
+	const bool aWasMouseVisible = mMouseVisible;
+	mMouseVisible = true;
+
+	MouseMove(aPosX, aPosY);
+	if (aInput.PrimaryPressed())
+	{
+		MouseDown(aPosX, aPosY, 1);
+	}
+	else if (aInput.PrimaryReleased())
+	{
+		MouseUp(aPosX, aPosY, 1);
+	}
+
+	mMouseVisible = aWasMouseVisible;
+
+	// 次键当作“Let's Rock”。玩家二够不到屏幕上的按钮——它们是由 WidgetManager
+	// 按真实鼠标分发的——所以这里直接走按钮的处理函数。
+	if (aInput.SecondaryPressed() && mSeedsInFlight == 0 && !mStartButton->mDisabled && mChooseState != CHOOSE_VIEW_LAWN)
+	{
+		mApp->PlaySample(Sexy::SOUND_TAP);
+		OnStartButton();
+	}
+}
+
+void SeedChooserScreen::DrawPlayerTwoCursor(Graphics* g)
+{
+	if (mChoosingPlayerIndex != 1 || !mBoard->IsLocalMultiplayer())
+		return;
+
+	// 没有现成的光标贴图可用（系统光标是玩家一的），所以直接画一个十字准星，不引用任何资源
+	const int aPosX = mBoard->mPlayer2.mInput.mPointerX - mX;
+	const int aPosY = mBoard->mPlayer2.mInput.mPointerY - mY;
+	g->SetColor(Color(255, 240, 0));
+	g->FillRect(aPosX - 10, aPosY - 1, 21, 3);
+	g->FillRect(aPosX - 1, aPosY - 10, 3, 21);
+}
+#endif
 
 //0x486E80
 void SeedChooserScreen::KeyDown(KeyCode theKey)

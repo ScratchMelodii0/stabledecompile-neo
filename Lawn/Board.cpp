@@ -11001,10 +11001,26 @@ int Board::GetNumSeedsInBank()
 		return 8;
 	}
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 主机版合作模式一共八个卡槽，两名玩家各四个，各自进一次选卡界面
+	if (HasSplitSeedChooser())
+	{
+		return COOP_SEEDS_PER_PLAYER;
+	}
+#endif
+
 	int aNumSeeds = mApp->mPlayerInfo->mPurchases[(int)StoreItem::STORE_ITEM_PACKET_UPGRADE] + 6;
 	int aSeedsAvailable = mApp->GetSeedsAvailable();
 	return min(aNumSeeds, aSeedsAvailable);
 }
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+//	该关卡是否走“两人各选四张”的分开选卡流程
+bool Board::HasSplitSeedChooser()
+{
+	return (mApp->IsCoopActive() && !mApp->IsVersusMode()) && ChooseSeedsOnCurrentLevel();
+}
+#endif
 
 //0x41C010
 bool Board::StageIsNight()
@@ -12459,6 +12475,12 @@ void Board::InitLocalMultiplayer()
 		// 对战模式中玩家二是僵尸一方：卡槽里放的是僵尸而不是植物，钱包里装的是脑子
 		mVersus.InitPlayer2SeedBank();
 	}
+	else if (HasSplitSeedChooser())
+	{
+		// 走分开选卡的关卡里，玩家二的四张卡由选卡界面自己填进来（见 SeedChooserScreen），
+		// 这里只把钱包对齐，卡槽留空。
+		mPlayer2.mSunMoney = mSunMoney;
+	}
 	else
 	{
 		for (int i = 0; i < SEEDBANK_MAX; i++)
@@ -12499,6 +12521,10 @@ void Board::SwapPlayerContext()
 void Board::UpdateLocalPlayers()
 {
 	if (!IsLocalMultiplayer())
+		return;
+
+	// 分开选卡时玩家二在关卡开始之前就已经就位了，那一段时间它的输入归选卡界面处理
+	if (mApp->mGameScene != GameScenes::SCENE_PLAYING)
 		return;
 
 	// 虚拟光标限制在棋盘控件的范围内，宽屏下这就是被拉宽后的那块区域
