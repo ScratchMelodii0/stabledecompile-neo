@@ -37,6 +37,20 @@ const int           LOCAL_PLAYER_2_START_X = 400;
 const int           LOCAL_PLAYER_2_START_Y = 300;
 const int           LOCAL_PLAYER_2_SEEDBANK_Y = 512;	// 玩家二的卡槽摆在屏幕底部
 
+// 对战模式：植物一方占左边六列，僵尸一方占右边三列
+const int           VERSUS_PLANT_COLUMNS = 6;
+const int           VERSUS_TARGET_ZOMBIE_COLUMN = 8;	// 靶子僵尸所在的、僵尸一方的最后一列
+const int           VERSUS_TARGET_ZOMBIE_COUNT = 3;		// 植物一方需要消灭的靶子僵尸数量
+const int           VERSUS_TARGET_ZOMBIE_HEALTH = 1350;	// 与铁桶僵尸的整体血量相当
+const int           VERSUS_STARTING_SUN = 50;
+const int           VERSUS_STARTING_BRAINS = 50;
+const int           VERSUS_BRAIN_VALUE = 25;			// 与一颗阳光等值
+const int           VERSUS_BRAIN_COUNTDOWN = 425;		// 与 SUN_COUNTDOWN 相同，两边的天降产出节奏一致
+const int           VERSUS_BRAIN_COUNTDOWN_RANGE = 275;
+const int           VERSUS_BRAIN_COUNTDOWN_MAX = 950;
+const int           VERSUS_GRAVE_BRAIN_RATE = 2500;		// 与向日葵的 mLaunchRate 相同
+const int           VERSUS_GRAVE_BRAIN_FIRST = 900;		// 新墓碑产出第一颗脑子所需的时间
+
 const int			WIDESCREEN_OFFSETX = -240;
 const int			WIDESCREEN_OFFSETY = -60;
 

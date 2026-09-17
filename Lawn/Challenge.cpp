@@ -409,6 +409,13 @@ void Challenge::InitLevel()
 	{
 		IZombieInitLevel();
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mApp->IsVersusMode())
+	{
+		// 对战模式的布场：家门口的脑子与僵尸一方的靶子僵尸
+		mBoard->mVersus.StartLevel();
+	}
+#endif
 	if (mApp->IsScaryPotterLevel())
 	{
 		ScaryPotterPopulate();
@@ -2671,6 +2678,14 @@ void Challenge::PlantAdded(Plant* thePlant)
 //0x425550
 PlantingReason Challenge::CanPlantAt(int theGridX, int theGridY, SeedType theSeedType)
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 对战模式中两边各有各的地盘，判定全部交给 LawnVersus
+	if (mApp->IsVersusMode())
+	{
+		return mBoard->mVersus.CanPlantAt(theGridX, theGridY, theSeedType);
+	}
+#endif
+
 	if (mApp->IsWallnutBowlingLevel())
 	{
 		return theGridX > 2 ? PLANTING_NOT_PASSED_LINE : PLANTING_OK;
@@ -5336,6 +5351,9 @@ bool Challenge::IsZombieSeedType(SeedType theSeedType)
 		theSeedType == SEED_ZOMBIE_POGO ||
 		theSeedType == SEED_ZOMBIE_DANCER ||
 		theSeedType == SEED_ZOMBIE_GARGANTUAR ||
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		theSeedType == SEED_ZOMBIE_GRAVESTONE ||
+#endif
 		theSeedType == SEED_ZOMBIE_IMP;
 }
 

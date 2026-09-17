@@ -72,6 +72,7 @@ Board::Board(LawnApp* theApp)
 	mSeedBank = new SeedBank();
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	mActivePlayerIndex = 0;
+	mVersus.Reset(this);
 #endif
 	mCutScene = new CutScene();
 	mSpecialGraveStoneX = -1;
@@ -727,7 +728,12 @@ void Board::PickZombieWaves()
 		GameMode aGameMode = mApp->mGameMode;
 		if (mApp->IsSurvivalMode() || mApp->IsLastStand())
 			mNumWaves = GetNumWavesPerSurvivalStage();
-		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN || aGameMode == GameMode::GAMEMODE_TREE_OF_WISDOM || mApp->IsSquirrelLevel())
+		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN || aGameMode == GameMode::GAMEMODE_TREE_OF_WISDOM || mApp->IsSquirrelLevel()
+#ifdef _HAS_LOCAL_MULTIPLAYER
+			// 对战模式中的僵尸全部由玩家二放置，没有自动出怪的波次
+			|| aGameMode == GameMode::GAMEMODE_VERSUS
+#endif
+			)
 			mNumWaves = 0;
 		else if (aGameMode == GameMode::GAMEMODE_CHALLENGE_WHACK_A_ZOMBIE)
 			mNumWaves = 12;
@@ -1123,6 +1129,9 @@ void Board::PickBackground()
 #endif
 #ifdef _CONSOLE_MINIGAMES
 	case GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON:
+#endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	case GameMode::GAMEMODE_VERSUS:
 #endif
 		mBackground = BackgroundType::BACKGROUND_1_DAY;
 		break;
@@ -1736,6 +1745,12 @@ void Board::InitLevel()
 	{
 		mSunMoney = 150;
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	else if (mApp->mGameMode == GameMode::GAMEMODE_VERSUS)
+	{
+		mSunMoney = VERSUS_STARTING_SUN;
+	}
+#endif
 	else if (mApp->IsFirstTimeAdventureMode() && mLevel == 1 && mApp->mPlayerInfo->GetLevel() <= 4)
 	{
 		mSunMoney = 150;
@@ -1807,6 +1822,19 @@ void Board::InitLevel()
 		mSeedBank->mSeedPackets[0].SetPacketType(SeedType::SEED_ZOMBIQUARIUM_SNORKLE);
 		mSeedBank->mSeedPackets[1].SetPacketType(SeedType::SEED_ZOMBIQUARIUM_TROPHY);
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	else if (aGameMode == GameMode::GAMEMODE_VERSUS)
+	{
+		// 对战模式中植物一方拿到一套固定的基础卡组
+		TOD_ASSERT(mSeedBank->mNumPackets == 6);
+		mSeedBank->mSeedPackets[0].SetPacketType(SeedType::SEED_SUNFLOWER);
+		mSeedBank->mSeedPackets[1].SetPacketType(SeedType::SEED_PEASHOOTER);
+		mSeedBank->mSeedPackets[2].SetPacketType(SeedType::SEED_WALLNUT);
+		mSeedBank->mSeedPackets[3].SetPacketType(SeedType::SEED_SNOWPEA);
+		mSeedBank->mSeedPackets[4].SetPacketType(SeedType::SEED_POTATOMINE);
+		mSeedBank->mSeedPackets[5].SetPacketType(SeedType::SEED_CHERRYBOMB);
+	}
+#endif
 	else if (aGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_1)
 	{
 		TOD_ASSERT(mSeedBank->mNumPackets == 3);
@@ -2064,6 +2092,10 @@ void Board::InitLawnMowers()
 #ifdef _DS_MINIGAMES
 		aGameMode == GameMode::GAMEMODE_CHALLENGE_BOMB_ALL_TOGETHER || aGameMode == GameMode::GAMEMODE_CHALLENGE_ZOMBIE_TRAP ||
 #endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		// 对战模式中植物一方的底线是家门口的脑子，小推车会抢在僵尸吃到脑子之前把它铲掉
+		aGameMode == GameMode::GAMEMODE_VERSUS ||
+#endif
 		mApp->IsSquirrelLevel() || mApp->IsIZombieLevel() || (StageHasRoof() && !mApp->mPlayerInfo->mPurchases[StoreItem::STORE_ITEM_ROOF_CLEANER]))
 		return;
 
@@ -2108,6 +2140,12 @@ bool Board::ChooseSeedsOnCurrentLevel()
 
 	if (mApp->IsIZombieLevel() || mApp->IsSlotMachineLevel())
 		return false;
+
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 对战模式两边都是固定卡组，不进选卡界面
+	if (mApp->IsVersusMode())
+		return false;
+#endif
 
 	if (mApp->mGameMode >= GameMode::GAMEMODE_LAST_STAND_STAGE_1 && mApp->mGameMode <= GameMode::GAMEMODE_LAST_STAND_STAGE_5)
 		return false;
@@ -4349,6 +4387,15 @@ void Board::MouseDownWithPlant(int x, int y, int theClickCount)
 		return;
 	}
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	// 对战模式中僵尸一方的卡牌，交由 LawnVersus 处理
+	if (mApp->IsVersusMode() && LawnVersus::IsVersusZombieSeed(GetSeedTypeInCursor()))
+	{
+		mVersus.MouseDownWithZombie(x, y, theClickCount);
+		return;
+	}
+#endif
+
 	SeedType aPlantingSeedType = GetSeedTypeInCursor();
 	int aGridX = PlantingPixelToGridX(x, y, aPlantingSeedType);
 	int aGridY = PlantingPixelToGridY(x, y, aPlantingSeedType);
@@ -6166,7 +6213,15 @@ void Board::UpdateSunSpawning()
 	mNumSunsFallen++;
 	mSunCountDown = min(SUN_COUNTDOWN_MAX, SUN_COUNTDOWN + mNumSunsFallen * 10) + Rand(SUN_COUNTDOWN_RANGE);
 	CoinType aSunType = mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_SUNNY_DAY ? CoinType::COIN_LARGESUN : CoinType::COIN_SUN;
-	AddCoin(RandRangeInt(100, 649), 60, aSunType, CoinMotion::COIN_MOTION_FROM_SKY);
+	int aSunMaxX = 649;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mApp->IsVersusMode())
+	{
+		// 对战模式中阳光只落在植物一侧，僵尸一侧落下的是脑子
+		aSunMaxX = GridToPixelX(VERSUS_PLANT_COLUMNS, 0) - 60;
+	}
+#endif
+	AddCoin(RandRangeInt(100, aSunMaxX), 60, aSunType, CoinMotion::COIN_MOTION_FROM_SKY);
 }
 
 //0x413C00
@@ -6990,11 +7045,15 @@ void Board::Update()
 	mCursorObject->Update();
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	// 卡牌是在选卡界面结束之后才填进卡槽的，所以玩家二的那一份要等到真正开始游戏时再建立
-	if (mApp->mLocalCoopEnabled && !mPlayer2.mActive && mApp->mGameScene == GameScenes::SCENE_PLAYING)
+	if ((mApp->mLocalCoopEnabled || mApp->IsVersusMode()) && !mPlayer2.mActive && mApp->mGameScene == GameScenes::SCENE_PLAYING)
 	{
 		InitLocalMultiplayer();
 	}
 	UpdateLocalPlayers();
+	if (mApp->IsVersusMode())
+	{
+		mVersus.Update();
+	}
 #endif
 	mPrevMouseX = mApp->mWidgetManager->mLastMouseX;
 	mPrevMouseY = mApp->mWidgetManager->mLastMouseY;
@@ -9618,6 +9677,10 @@ void Board::DrawUITop(Graphics* g)
 		mCursorObject->EndDraw(g);
 	}
 #ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mApp->IsVersusMode())
+	{
+		mVersus.DrawDivider(g);
+	}
 	DrawPlayer2Cursor(g);
 #endif
 
@@ -10865,6 +10928,12 @@ int Board::GetNumSeedsInBank()
 	{
 		return 2;
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mApp->mGameMode == GameMode::GAMEMODE_VERSUS)
+	{
+		return 6;
+	}
+#endif
 	if (mApp->mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_1 || mApp->mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_2 ||
 		mApp->mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_3 || mApp->mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_4)
 	{
@@ -12296,7 +12365,8 @@ int Board::GetPlayerPointerY(int thePlayerIndex)
 #ifdef _HAS_LOCAL_MULTIPLAYER
 bool Board::IsLocalMultiplayer()
 {
-	return mApp->mLocalCoopEnabled && mPlayer2.mActive;
+	// 合作与对战都是同机双人，玩家二的那一套状态与输入是完全共用的
+	return (mApp->mLocalCoopEnabled || mApp->IsVersusMode()) && mPlayer2.mActive;
 }
 
 //	在关卡开始时为玩家二准备好光标与卡槽
@@ -12305,7 +12375,7 @@ void Board::InitLocalMultiplayer()
 	mActivePlayerIndex = 0;
 	mPlayer2.Reset(1);
 
-	if (!mApp->mLocalCoopEnabled || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN ||
+	if ((!mApp->mLocalCoopEnabled && !mApp->IsVersusMode()) || mApp->mGameMode == GameMode::GAMEMODE_CHALLENGE_ZEN_GARDEN ||
 		mApp->IsChallengeWithoutSeedBank() || HasConveyorBeltSeedBank() || mApp->IsSlotMachineLevel())
 		return;
 
@@ -12335,12 +12405,20 @@ void Board::InitLocalMultiplayer()
 	}
 	SwapPlayerContext();
 
-	for (int i = 0; i < SEEDBANK_MAX; i++)
+	if (mApp->IsVersusMode())
 	{
-		mPlayer2.mSeedBank->mSeedPackets[i].SetPacketType(
-			mSeedBank->mSeedPackets[i].mPacketType, mSeedBank->mSeedPackets[i].mImitaterType);
+		// 对战模式中玩家二是僵尸一方：卡槽里放的是僵尸而不是植物，钱包里装的是脑子
+		mVersus.InitPlayer2SeedBank();
 	}
-	mPlayer2.mSunMoney = mSunMoney;
+	else
+	{
+		for (int i = 0; i < SEEDBANK_MAX; i++)
+		{
+			mPlayer2.mSeedBank->mSeedPackets[i].SetPacketType(
+				mSeedBank->mSeedPackets[i].mPacketType, mSeedBank->mSeedPackets[i].mImitaterType);
+		}
+		mPlayer2.mSunMoney = mSunMoney;
+	}
 }
 
 //	在“玩家一的状态”与“玩家二的状态”之间来回切换

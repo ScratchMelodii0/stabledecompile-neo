@@ -1061,6 +1061,14 @@ void SeedBank::Draw(Graphics* g)
 			aMoneyColor = Color(255, 0, 0);
 		}
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+		// 对战模式中僵尸一方的钱是脑子，把卡槽上印着的太阳盖成一颗脑子
+		if (mApp->IsVersusMode() && mBoard->mActivePlayerIndex == 1)
+		{
+			TodDrawImageCenterScaledF(g, IMAGE_BRAIN, 34, 55, 0.55f, 0.55f);
+		}
+#endif
+
 		TodDrawString(g, aMoneyLabel, 34, 78, FONT_CONTINUUMBOLD14, aMoneyColor, DrawStringJustification::DS_ALIGN_CENTER);
 	}
 

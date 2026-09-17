@@ -62,6 +62,9 @@ public:
     Color                   GetColor();
     /*inline*/ bool         IsMoney();
     /*inline*/ bool         IsSun();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    /*inline*/ bool         IsBrain();
+#endif
     float                   GetSunScale();
     inline bool             IsOnGround() { return false; }
     SeedType                GetFinalSeedPacketType();

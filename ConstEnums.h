@@ -196,6 +196,9 @@ enum CoinType
     COIN_PRESENT_MINIGAMES,
     COIN_PRESENT_PUZZLE_MODE,
     COIN_PRESENT_SURVIVAL_MODE,
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    COIN_BRAIN,                 // 对战模式中僵尸一方的“阳光”，掉落在僵尸一侧的几列上
+#endif
 };
 enum CrazyDaveState
 {
@@ -490,6 +493,9 @@ enum GameMode
 #endif
 #ifdef _CONSOLE_MINIGAMES
     GAMEMODE_CHALLENGE_HEAVY_WEAPON,
+#endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    GAMEMODE_VERSUS,
 #endif
     NUM_GAME_MODES
 };
@@ -1186,6 +1192,9 @@ enum SeedType
     SEED_ZOMBIE_DANCER,
     SEED_ZOMBIE_GARGANTUAR,
     SEED_ZOMBIE_IMP,
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    SEED_ZOMBIE_GRAVESTONE,     // 对战模式中僵尸一方的产出单位，同时也是一堵墙
+#endif
     NUM_SEEDS_IN_CHOOSER = (int) SEED_EXPLODE_O_NUT,
     SEED_NONE = -1
 };
