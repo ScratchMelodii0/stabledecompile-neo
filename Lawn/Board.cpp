@@ -6099,6 +6099,15 @@ void Board::ZombiesWon(Zombie* theZombie)
 	{
 		aGameOverMsg = _S("[I_ZOMBIE_DEATH_MESSAGE]");
 	}
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	else if (mApp->IsVersusMode())
+	{
+		// 对战模式里僵尸吃到脑子即为僵尸一方获胜，沿用“我是僵尸”同款的简单结算弹窗
+		// （而不是走下面那套“僵尸赢了 = 你输了”的过场动画），只是换一个专属标题，
+		// 明确点出“僵尸方胜利”而不是含糊的游戏结束
+		aGameOverMsg = _S("[VERSUS_ZOMBIE_WIN_MESSAGE]");
+	}
+#endif
 	else
 	{
 		mApp->mGameScene = GameScenes::SCENE_ZOMBIES_WON;
@@ -6115,7 +6124,17 @@ void Board::ZombiesWon(Zombie* theZombie)
 		return;
 	}
 
-	GameOverDialog* aGameOverDialog = new GameOverDialog(aGameOverMsg, true);
+	GameOverDialog* aGameOverDialog;
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	if (mApp->IsVersusMode())
+	{
+		aGameOverDialog = new GameOverDialog(aGameOverMsg, false, _S("[VERSUS_ZOMBIE_WIN_HEADER]"));
+	}
+	else
+#endif
+	{
+		aGameOverDialog = new GameOverDialog(aGameOverMsg, true);
+	}
 	mApp->AddDialog(Dialogs::DIALOG_GAME_OVER, aGameOverDialog);
 
 	mApp->mMusic->StopAllMusic();

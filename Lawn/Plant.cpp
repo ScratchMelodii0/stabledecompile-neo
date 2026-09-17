@@ -6670,6 +6670,15 @@ SexyString Plant::GetToolTip(SeedType theSeedType)
 //0x467E30
 int Plant::GetRefreshTime(SeedType theSeedType, SeedType theImitaterType)
 {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 对战模式里僵尸卡牌是有冷却的（不同于“我是僵尸”），必须在下面的 IsZombieSeedType
+    // 早退之前处理，因为墓碑等对战专属类型不在 gPlantDefs 里，不能走到后面的索引逻辑
+    if (gLawnApp->IsVersusMode() && LawnVersus::IsVersusZombieSeed(theSeedType))
+    {
+        return LawnVersus::GetZombieSeedRefreshTime(theSeedType);
+    }
+#endif
+
     if (Challenge::IsZombieSeedType(theSeedType))
     {
         return 0;

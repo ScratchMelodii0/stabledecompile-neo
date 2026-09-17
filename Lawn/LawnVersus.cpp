@@ -63,7 +63,10 @@ bool LawnVersus::IsUsableSquare(int theGridX, int theGridY)
 	return aGridSquare != GridSquareType::GRIDSQUARE_NONE && aGridSquare != GridSquareType::GRIDSQUARE_DIRT;
 }
 
-//	僵尸一方可以使用的卡牌。墓碑既是产出单位又是一堵墙，其余五种是进攻单位。
+//	僵尸一方在整个游戏生涯中可能用到的全部卡牌。墓碑既是产出单位又是一堵墙，其余是进攻单位。
+//	是否已经解锁（是否会被 InitPlayer2SeedBank 实际发到卡槽里）另见 IsZombieCardUnlocked，
+//	这里只负责“这个 SeedType 属不属于对战僵尸卡”这一分类，供 CanPlantAt/Board 等处判定用，
+//	与解锁进度无关（哪怕还没解锁，被误传进来也要能识别成僵尸卡而不是植物卡）。
 bool LawnVersus::IsVersusZombieSeed(SeedType theSeedType)
 {
 	return
@@ -72,7 +75,11 @@ bool LawnVersus::IsVersusZombieSeed(SeedType theSeedType)
 		theSeedType == SeedType::SEED_ZOMBIE_TRAFFIC_CONE ||
 		theSeedType == SeedType::SEED_ZOMBIE_SCREEN_DOOR ||
 		theSeedType == SeedType::SEED_ZOMBIE_PAIL ||
-		theSeedType == SeedType::SEED_ZOMBIE_FOOTBALL;
+		theSeedType == SeedType::SEED_ZOMBIE_FOOTBALL ||
+		theSeedType == SeedType::SEED_ZOMBIE_IMP ||
+		theSeedType == SeedType::SEED_ZOMBIE_LADDER ||
+		theSeedType == SeedType::SEED_ZOMBIE_DIGGER ||
+		theSeedType == SeedType::SEED_ZOMBIE_GARGANTUAR;
 }
 
 //	对战模式中的价格以脑子计，与“我是僵尸”中的阳光价格无关
@@ -86,8 +93,75 @@ int LawnVersus::GetZombieSeedCost(SeedType theSeedType)
 	case SeedType::SEED_ZOMBIE_SCREEN_DOOR:		return 100;
 	case SeedType::SEED_ZOMBIE_PAIL:			return 125;
 	case SeedType::SEED_ZOMBIE_FOOTBALL:		return 200;
+	case SeedType::SEED_ZOMBIE_IMP:				return 50;
+	case SeedType::SEED_ZOMBIE_LADDER:			return 150;
+	case SeedType::SEED_ZOMBIE_DIGGER:			return 125;
+	case SeedType::SEED_ZOMBIE_GARGANTUAR:		return 300;
 	default:									return 9990;
 	}
+}
+
+// ====================================================================================================
+// ▲ 卡组解锁进度
+// ----------------------------------------------------------------------------------------------------
+// 主机版里“我是僵尸”的卡组会随冒险模式的推进逐步解锁；这里的存档（PlayerInfo）没有逐关记录哪些
+// 僵尸已经解锁，只有 mPlayerInfo->mLevel（当前打到冒险模式第几关）和 mFinishedAdventure（是否通关，
+// 0=没通关，1=普通难度通关一次，2=通关两次后的高难度）。LawnApp::CanShowStore/CanShowZenGarden 也是
+// 用同样的 mLevel 阈值（25、45）来控制解锁，这里沿用同一套模式：
+//   · 墓碑、普通僵尸：一开始就有（否则没法开局）
+//   · 之后每解锁若干关卡，多给一种僵尸，直到把卡槽（SEEDBANK_MAX=10：1 张墓碑 + 9 种攻击僵尸）填满
+//   · 撑杆僵尸初始化时会被直接扔进 PHASE_POLEVAULTER_PRE_VAULT（Lawn/Zombie.cpp 的
+//     ZOMBIE_POLEVAULTER 分支），跳过“从墓碑里爬出来”能识别的 PHASE_ZOMBIE_NORMAL 状态；
+//     实测挖地鼠僵尸在场上出生时也会被立刻扔进 PHASE_DIGGER_TUNNELING，同样绕开了正常出生阶段，
+//     PlaceZombieOnGrave 里那条“非 PHASE_ZOMBIE_NORMAL 就跳过爬出动画、直接摆放”的退路本来就是
+//     为这种情况准备的，两者会走相同的代码路径、都不会崩溃。所以撑杆僵尸并非“不兼容”到不能用，
+//     只是没有爬出墓碑的动画（挖地鼠正好相反，直接出现更符合“挖出来”的主题，所以观感没问题）。
+//     鉴于此，这里继续保留上一版用屏风门僵尸替换撑杆僵尸的选择（动画观感更好），
+//     但把挖地鼠僵尸纳入解锁卡组，证明同一条退路确实是安全的。
+bool LawnVersus::IsZombieCardUnlocked(SeedType theSeedType, LawnApp* theApp)
+{
+	if (theApp == nullptr || theApp->mPlayerInfo == nullptr)
+	{
+		return theSeedType == SeedType::SEED_ZOMBIE_GRAVESTONE || theSeedType == SeedType::SEED_ZOMBIE_NORMAL;
+	}
+
+	int aLevel = theApp->mPlayerInfo->mLevel;
+
+	switch (theSeedType)
+	{
+	case SeedType::SEED_ZOMBIE_GRAVESTONE:		return true;
+	case SeedType::SEED_ZOMBIE_NORMAL:			return true;
+	case SeedType::SEED_ZOMBIE_TRAFFIC_CONE:	return aLevel >= 5;
+	case SeedType::SEED_ZOMBIE_SCREEN_DOOR:		return aLevel >= 10;
+	case SeedType::SEED_ZOMBIE_PAIL:			return aLevel >= 15;
+	case SeedType::SEED_ZOMBIE_IMP:				return aLevel >= 20;
+	case SeedType::SEED_ZOMBIE_LADDER:			return aLevel >= 25;
+	case SeedType::SEED_ZOMBIE_DIGGER:			return aLevel >= 30;
+	case SeedType::SEED_ZOMBIE_FOOTBALL:		return aLevel >= 35;
+	case SeedType::SEED_ZOMBIE_GARGANTUAR:		return theApp->HasFinishedAdventure();
+	default:									return false;
+	}
+}
+
+//	对战模式的僵尸卡牌沿用向日葵/豌豆射手式的冷却机制（“我是僵尸”里僵尸卡是不冷却的，脑子是唯一限制）。
+//	冷却时间与造价成正比（约 15 ticks/脑子），再夹到与普通植物卡相同的“短/长/很长”区间
+//	（AlmanacDialog 里的 750 / 3000 / 5000），这样便宜的路障/铁桶僵尸能像豌豆射手一样连续铺人，
+//	昂贵的橄榄球僵尸则和坚果墙一样要攒好一阵子。
+int LawnVersus::GetZombieSeedRefreshTime(SeedType theSeedType)
+{
+	const int VERSUS_REFRESH_MIN = 750;
+	const int VERSUS_REFRESH_MAX = 5000;
+	const int VERSUS_REFRESH_PER_BRAIN = 15;
+
+	int aCost = GetZombieSeedCost(theSeedType);
+	int aRefreshTime = aCost * VERSUS_REFRESH_PER_BRAIN;
+
+	if (aRefreshTime < VERSUS_REFRESH_MIN)
+		aRefreshTime = VERSUS_REFRESH_MIN;
+	if (aRefreshTime > VERSUS_REFRESH_MAX)
+		aRefreshTime = VERSUS_REFRESH_MAX;
+
+	return aRefreshTime;
 }
 
 ZombieType LawnVersus::SeedTypeToZombieType(SeedType theSeedType)
@@ -164,26 +238,48 @@ void LawnVersus::PlaceTargetZombies()
 	mTargetZombiesPlaced = mTargetZombiesLeft > 0;
 }
 
-//	玩家二的卡槽：一张墓碑加五种进攻僵尸。玩家二的卡槽与“阳光”（脑子）本身由合作模式中的
-//	Board::mPlayer2 提供，这里只负责把卡牌换成僵尸并给出初始脑子数。
+//	玩家二的卡槽：一张墓碑加最多九种按冒险模式进度解锁的进攻僵尸（见 IsZombieCardUnlocked）。
+//	玩家二的卡槽与“阳光”（脑子）本身由合作模式中的 Board::mPlayer2 提供，这里只负责把卡牌
+//	换成已解锁的僵尸并给出初始脑子数。
 void LawnVersus::InitPlayer2SeedBank()
 {
-	const SeedType aZombieSeeds[] = {
+	// 完整卡池，按解锁顺序排列；墓碑永远排第一（供给僵尸一方的产出）
+	const SeedType aAllZombieSeeds[] = {
 		SeedType::SEED_ZOMBIE_GRAVESTONE,
 		SeedType::SEED_ZOMBIE_NORMAL,
 		SeedType::SEED_ZOMBIE_TRAFFIC_CONE,
 		SeedType::SEED_ZOMBIE_SCREEN_DOOR,
 		SeedType::SEED_ZOMBIE_PAIL,
-		SeedType::SEED_ZOMBIE_FOOTBALL
+		SeedType::SEED_ZOMBIE_IMP,
+		SeedType::SEED_ZOMBIE_LADDER,
+		SeedType::SEED_ZOMBIE_DIGGER,
+		SeedType::SEED_ZOMBIE_FOOTBALL,
+		SeedType::SEED_ZOMBIE_GARGANTUAR
 	};
+
+	SeedType aZombieSeeds[LENGTH(aAllZombieSeeds)];
+	int aNumUnlocked = 0;
+	for (int i = 0; i < (int)LENGTH(aAllZombieSeeds); i++)
+	{
+		if (IsZombieCardUnlocked(aAllZombieSeeds[i], mApp))
+		{
+			aZombieSeeds[aNumUnlocked++] = aAllZombieSeeds[i];
+		}
+	}
 
 	SeedBank* aSeedBank = mBoard->mPlayer2.mSeedBank;
 	if (aSeedBank == nullptr)
 		return;
 
+	// Board::InitPlayer2Cursor 在调用本函数之前，通过 SwapPlayerContext + UpdateWidth() 的把戏
+	// 把玩家二这份卡槽的 mNumPackets 设成了 GetNumSeedsInBank()（对战模式固定是 6，那是历史上
+	// 卡组还没有随进度扩展时的值）。这里按实际解锁数量重新赋值，让卡槽随进度一起变宽——
+	// 这是玩家二私有的字段，不会影响玩家一（植物）那边的卡槽大小。
+	aSeedBank->mNumPackets = min(aNumUnlocked, SEEDBANK_MAX);
+
 	for (int i = 0; i < SEEDBANK_MAX; i++)
 	{
-		if (i < (int)LENGTH(aZombieSeeds) && i < aSeedBank->mNumPackets)
+		if (i < aSeedBank->mNumPackets)
 		{
 			aSeedBank->mSeedPackets[i].SetPacketType(aZombieSeeds[i]);
 		}
@@ -446,6 +542,11 @@ void LawnVersus::PlantPlayerWins()
 		return;
 
 	mGameOver = true;
+	// 明确点出“植物方胜利”：借用现成的长效提示条（DisplayAdvice/MESSAGE_STYLE_HINT_LONG，
+	// 本文件其它地方判定不能种/不能放僵尸时也用它来提示玩家），不去碰 AwardScreen 那套
+	// 复杂的过关流程本身——奖杯照常掉落、关卡照常按现有的“挑战关卡通关”流程结算
+	mBoard->DisplayAdvice(_S("[VERSUS_PLANT_WIN_MESSAGE]"), MessageStyle::MESSAGE_STYLE_HINT_LONG, AdviceType::ADVICE_NONE);
+
 	// 与其它挑战关卡一致：掉出奖杯，关卡即告通过
 	mBoard->mChallenge->SpawnLevelAward(VERSUS_PLANT_COLUMNS - 1, 2);
 }
