@@ -329,6 +329,9 @@ public:
 	static /*inline*/ bool			IsEndlessScaryPotter(GameMode theGameMode);
 	/*inline*/ bool					IsSquirrelLevel();
 	/*inline*/ bool					IsIZombieLevel();
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	/*inline*/ bool					IsVersusMode();
+#endif
 	/*inline*/ bool					CanShowZenGarden();
 	static SexyString				GetMoneyString(int theAmount);
 	bool							AdvanceCrazyDaveText();

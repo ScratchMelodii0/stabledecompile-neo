@@ -13,6 +13,7 @@
 #include "LawnMower.h"
 #include "GridItem.h"
 #include "LawnPlayer.h"
+#include "LawnVersus.h"
 
 #include "../SexyAppFramework/DDInterface.h"
 #include "../SexyAppFramework/SexyMatrix.h"
@@ -140,6 +141,8 @@ public:
 	// 这样 Board 里上万行只认识“当前玩家”的旧代码都无须改写。
 	LawnPlayer						mPlayer2;
 	int								mActivePlayerIndex;
+	// 对战模式的全部状态（分界、脑子经济、靶子僵尸与胜负判定）
+	LawnVersus						mVersus;
 #endif
 	GameButton*						mMenuButton;											//+0x148
 #ifdef _REPLANTED_SPEED_CONTROL

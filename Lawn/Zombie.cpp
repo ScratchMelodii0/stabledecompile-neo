@@ -8148,6 +8148,14 @@ void Zombie::CheckIfPreyCaught()
         return;
     }
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 对战模式：啃掉植物一方家门口的脑子，僵尸一方即获胜
+    if (mApp->IsVersusMode() && mBoard->mVersus.EatHouseBrain(this))
+    {
+        return;
+    }
+#endif
+
     if (mIsEating)
     {
         StopEating();

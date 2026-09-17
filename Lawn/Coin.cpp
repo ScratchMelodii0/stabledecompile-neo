@@ -295,6 +295,13 @@ void Coin::CoinInitialize(int theX, int theY, CoinType theCoinType, CoinMotion t
         mHeight = IMAGE_PRESENT->GetCelHeight();
         mRenderOrder = Board::MakeRenderOrder(RenderLayer::RENDER_LAYER_ABOVE_UI, 0, 0);
     }
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    else if (IsBrain())
+    {
+        mWidth = IMAGE_BRAIN->GetCelWidth();
+        mHeight = IMAGE_BRAIN->GetCelHeight();
+    }
+#endif
 
     switch (mCoinMotion)
     {
@@ -438,6 +445,14 @@ bool Coin::IsMoney()
     return IsMoney(mType);
 }
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+//	对战模式中僵尸一方的货币。它不是阳光：阳光用的是 REANIM_SUN 附件，脑子直接画一张贴图。
+bool Coin::IsBrain()
+{
+    return mType == CoinType::COIN_BRAIN;
+}
+#endif
+
 //0x430990
 bool Coin::IsSun()
 {
@@ -464,6 +479,13 @@ void Coin::ScoreCoin()
             mBoard->mChallenge->mChallengePoints += aSunValue;
         }
     }
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    else if (IsBrain())
+    {
+        // 此处 mSunMoney 已经是僵尸一方的那一份（见 Board::SwapPlayerContext）
+        mBoard->AddSunMoney(VERSUS_BRAIN_VALUE);
+    }
+#endif
     else if (IsMoney())
     {
         int aCoinValue = Coin::GetCoinValue(mType);
@@ -926,6 +948,12 @@ void Coin::Draw(Graphics* g)
     {
         return;
     }
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    else if (IsBrain())
+    {
+        aImage = IMAGE_BRAIN;
+    }
+#endif
     else if (mType == CoinType::COIN_FINAL_SEED_PACKET)
     {
         SeedType aSeedType = GetFinalSeedPacketType();
@@ -1502,6 +1530,21 @@ bool Coin::MouseHitTest(int theX, int theY, HitResult* theHitResult)
     {
         aCanHitCoin = false;
     }
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 对战模式中两边的钱是分开的：阳光只有植物一方（玩家一）能捡，脑子只有僵尸一方（玩家二）能捡。
+    // mActivePlayerIndex 指出当前正在处理的是哪一名玩家的点击（见 Board::SwapPlayerContext）。
+    if (mBoard && mApp->IsVersusMode())
+    {
+        if (IsBrain() && mBoard->mActivePlayerIndex != 1)
+        {
+            aCanHitCoin = false;
+        }
+        else if (IsSun() && mBoard->mActivePlayerIndex != 0)
+        {
+            aCanHitCoin = false;
+        }
+    }
+#endif
     if (mType == CoinType::COIN_USABLE_SEED_PACKET && mBoard)
     {
         if (mBoard->mCursorObject->mCursorType != CursorType::CURSOR_TYPE_NORMAL && !mApp->IsWhackAZombieLevel() 

@@ -3391,6 +3391,14 @@ bool LawnApp::IsIZombieLevel()
 		mGameMode == GameMode::GAMEMODE_PUZZLE_I_ZOMBIE_ENDLESS;
 }
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+//	同机双人对战。与合作模式不同，对战是一个独立的游戏模式而非一个开关。
+bool LawnApp::IsVersusMode()
+{
+	return mBoard && mGameMode == GameMode::GAMEMODE_VERSUS;
+}
+#endif
+
 //0x453820
 bool LawnApp::IsShovelLevel()
 {

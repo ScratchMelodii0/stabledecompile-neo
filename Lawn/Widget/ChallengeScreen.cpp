@@ -117,6 +117,9 @@ ChallengeDefinition gChallengeDefs[NUM_CHALLENGE_MODES] = {
 #ifdef _CONSOLE_MINIGAMES
 	{ GameMode::GAMEMODE_CHALLENGE_HEAVY_WEAPON,			   10,  ChallengePage::CHALLENGE_PAGE_LIMBO_CHALLENGE,       4,  3,  _S("[HEAVY_WEAPON]") },
 #endif
+#ifdef _HAS_LOCAL_MULTIPLAYER
+	{ GameMode::GAMEMODE_VERSUS,							   10,  ChallengePage::CHALLENGE_PAGE_LIMBO_CHALLENGE,       5,  1,  _S("[VERSUS]") },
+#endif
 };
 
 //0x42DAE0

@@ -5301,6 +5301,22 @@ void Plant::DrawSeedType(Graphics* g, SeedType theSeedType, SeedType theImitater
     g->PushState();
     //g->SetLinearBlend(true);
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    if (aSeedType == SeedType::SEED_ZOMBIE_GRAVESTONE)
+    {
+        // 墓碑卡牌没有专门的美术，直接用草坪上的墓碑贴图（第一列、白天的那一行）
+        int aCelWidth = IMAGE_TOMBSTONES->GetCelWidth();
+        int aCelHeight = IMAGE_TOMBSTONES->GetCelHeight();
+        g->mScaleX *= 0.5f;
+        g->mScaleY *= 0.5f;
+        TodDrawImageCelScaledF(g, IMAGE_TOMBSTONES, thePosX + aOffsetX - aCelWidth * 0.25f, thePosY + aOffsetY - aCelHeight * 0.25f,
+            0, 2, g->mScaleX, g->mScaleY);
+        g->PopState();
+        g->PopState();
+        return;
+    }
+#endif
+
     if (Challenge::IsZombieSeedType(aSeedType))
     {
         ZombieType aZombieType = Challenge::IZombieSeedTypeToZombieType(aSeedType);
@@ -6577,8 +6593,19 @@ int Plant::GetCost(SeedType theSeedType, SeedType theImitaterType)
         }
     }
 
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    // 对战模式中僵尸一方的卡牌按脑子计价，与“我是僵尸”中的阳光价格是两套数值
+    if (gLawnApp->IsVersusMode() && !gLawnApp->GetDialog(Dialogs::DIALOG_ALMANAC) && LawnVersus::IsVersusZombieSeed(theSeedType))
+    {
+        return LawnVersus::GetZombieSeedCost(theSeedType);
+    }
+#endif
+
     switch (theSeedType)
     {
+#ifdef _HAS_LOCAL_MULTIPLAYER
+    case SeedType::SEED_ZOMBIE_GRAVESTONE:          return 50;
+#endif
     case SeedType::SEED_SLOT_MACHINE_SUN:           return 0;
     case SeedType::SEED_SLOT_MACHINE_DIAMOND:       return 0;
     case SeedType::SEED_ZOMBIQUARIUM_SNORKLE:       return 100;

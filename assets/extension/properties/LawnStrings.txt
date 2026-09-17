@@ -6,3 +6,12 @@ Slide your cannon along the lawn and rain peas on the zombies!
 
 [ADVICE_AIR_RAID_DS]
 Fly your Gatling Pea around the lawn and mow the zombies down!
+
+[VERSUS]
+Versus
+
+[ADVICE_VERSUS_ONLY_ON_GRAVES]
+Zombies rise on graves - put down a Gravestone first!
+
+[ADVICE_VERSUS_ZOMBIE_SIDE_ONLY]
+Zombies can only go on the zombie side of the lawn!
