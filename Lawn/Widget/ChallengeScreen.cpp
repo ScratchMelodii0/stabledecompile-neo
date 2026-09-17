@@ -120,17 +120,17 @@ ChallengeDefinition gChallengeDefs[NUM_CHALLENGE_MODES] = {
 #ifdef _HAS_LOCAL_MULTIPLAYER
 	{ GameMode::GAMEMODE_VERSUS,							   10,  ChallengePage::CHALLENGE_PAGE_LIMBO_CHALLENGE,       5,  1,  _S("[VERSUS]") },
 	// 主机版的十一个合作关卡，顺序与 GameMode 枚举逐项对齐（GetChallengeDefinition 会断言这一点）
-	{ GameMode::GAMEMODE_COOP_DAY,							    0,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  0,  _S("[COOP_DAY]") },
-	{ GameMode::GAMEMODE_COOP_NIGHT,						    1,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  1,  _S("[COOP_NIGHT]") },
-	{ GameMode::GAMEMODE_COOP_POOL,							    2,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  2,  _S("[COOP_POOL]") },
-	{ GameMode::GAMEMODE_COOP_ROOF,							    4,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  3,  _S("[COOP_ROOF]") },
-	{ GameMode::GAMEMODE_COOP_BOWLING,						    6,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  4,  _S("[COOP_BOWLING]") },
-	{ GameMode::GAMEMODE_COOP_HARD_DAY,						    5,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  0,  _S("[COOP_HARD_DAY]") },
-	{ GameMode::GAMEMODE_COOP_HARD_NIGHT,					    6,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  1,  _S("[COOP_HARD_NIGHT]") },
-	{ GameMode::GAMEMODE_COOP_HARD_POOL,					    7,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  2,  _S("[COOP_HARD_POOL]") },
-	{ GameMode::GAMEMODE_COOP_HARD_ROOF,					    9,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  3,  _S("[COOP_HARD_ROOF]") },
-	{ GameMode::GAMEMODE_COOP_ZOMBOSS,						   19,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  4,  _S("[COOP_ZOMBOSS]") },
-	{ GameMode::GAMEMODE_COOP_ENDLESS,						   12,  ChallengePage::CHALLENGE_PAGE_COOP,		 2,  0,  _S("[COOP_ENDLESS]") },
+	{ GameMode::GAMEMODE_COOP_DAY,                            0,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  0,  _S("[COOP_DAY]") },
+	{ GameMode::GAMEMODE_COOP_NIGHT,                          1,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  1,  _S("[COOP_NIGHT]") },
+	{ GameMode::GAMEMODE_COOP_POOL,                           2,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  2,  _S("[COOP_POOL]") },
+	{ GameMode::GAMEMODE_COOP_ROOF,                           4,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  3,  _S("[COOP_ROOF]") },
+	{ GameMode::GAMEMODE_COOP_BOWLING,                        0,  ChallengePage::CHALLENGE_PAGE_COOP,		 0,  4,  _S("[COOP_BOWLING]") },
+	{ GameMode::GAMEMODE_COOP_HARD_DAY,                       5,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  0,  _S("[COOP_HARD_DAY]") },
+	{ GameMode::GAMEMODE_COOP_HARD_NIGHT,                     6,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  1,  _S("[COOP_HARD_NIGHT]") },
+	{ GameMode::GAMEMODE_COOP_HARD_POOL,                      7,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  2,  _S("[COOP_HARD_POOL]") },
+	{ GameMode::GAMEMODE_COOP_HARD_ROOF,                      9,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  3,  _S("[COOP_HARD_ROOF]") },
+	{ GameMode::GAMEMODE_COOP_ZOMBOSS,                        4,  ChallengePage::CHALLENGE_PAGE_COOP,		 1,  4,  _S("[COOP_ZOMBOSS]") },
+	{ GameMode::GAMEMODE_COOP_ENDLESS,                       12,  ChallengePage::CHALLENGE_PAGE_COOP,		 2,  0,  _S("[COOP_ENDLESS]") },
 #endif
 };
 
@@ -619,7 +619,12 @@ void ChallengeScreen::DrawButton(Graphics* g, int theChallengeIndex)
 				}
 				g->SetColorizeImages(true);
 			}
-			if (mPageIndex == CHALLENGE_PAGE_SURVIVAL || mPageIndex == CHALLENGE_PAGE_LIMBO_SURVIVAL)
+			if (mPageIndex == CHALLENGE_PAGE_SURVIVAL || mPageIndex == CHALLENGE_PAGE_LIMBO_SURVIVAL
+#ifdef _HAS_LOCAL_MULTIPLAYER
+				// 合作关卡与生存关卡同形，缩略图也用生存模式的那一张图集
+				|| mPageIndex == CHALLENGE_PAGE_COOP
+#endif
+				)
 			{
 				g->DrawImageCel(Sexy::IMAGE_SURVIVAL_THUMBNAILS, aPosX + 13, aPosY + 4, aDef.mChallengeIconIndex);
 			}
